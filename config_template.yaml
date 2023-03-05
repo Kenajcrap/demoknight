@@ -1,0 +1,25 @@
+# Template with all config options and default values to be used as reference.
+# Options with empty strings or left blank will be ignored.
+gameid: 0              # Required if game-path is not used
+game-path:             # Default: Automatic, or required if gameid is not used
+demo-path:             # Required
+raw-path:              # Default: Your OS's temp folder
+steam-path:            # Default: Automatic
+output-file:           # Default: 'summary_%Y-%m-%d_%H-%M-%S'
+launch-options:
+passes: 5
+keep-first-pass: True
+start-tick: 153
+duration: 20.0
+tickrate: 66.6
+no-baseline: False
+versodity: "WARNING"
+format: "csv"
+tests:
+  - name:
+    changes:
+      - cvar:
+          -
+        launch-options:
+          -
+            
