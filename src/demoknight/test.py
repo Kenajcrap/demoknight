@@ -1,6 +1,7 @@
 import logging
 import re
 from argparse import Namespace
+from datetime import datetime
 from os import environ
 from platform import system
 from time import perf_counter, sleep
@@ -124,13 +125,20 @@ class Test:
             gm.not_capturing.clear()
             if system().startswith("Win"):
                 specific_presentmon_conf = [
-                    f"-timed {args.duration + start_delay}",
-                    f"-output_file {args.raw_path.absolute()}",
+                    "-timed",
+                    str(args.duration + start_delay),
+                    "-process_id",
+                    str(gm.pid),
+                    "-output_file",
+                    str(
+                        args.raw_path.absolute()
+                        / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+                    ),
                 ]
                 Popen(
                     [args.presentmon_path]
-                    + Test.required_presentmon_conf
                     + specific_presentmon_conf
+                    + Test.required_presentmon_conf
                 )
 
             if system().startswith("Linux"):
