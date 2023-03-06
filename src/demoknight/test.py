@@ -3,11 +3,10 @@ import re
 from argparse import Namespace
 from os import environ
 from platform import system
-from psutil import Popen, subprocess
-
 from time import perf_counter, sleep
 
 import numpy as np
+from psutil import Popen, subprocess
 
 from .game import Game
 
@@ -44,6 +43,7 @@ class Test:
             NEW_PROCESS_GROUP = 0x00000200
             DETACHED_PROCESS = 0x00000008
             kwargs.update(creationflags=DETACHED_PROCESS | NEW_PROCESS_GROUP)
+            kwargs.update(env=environ.copy())
 
         elif system().startswith("Linux"):
             specific_mangohud_conf = [
