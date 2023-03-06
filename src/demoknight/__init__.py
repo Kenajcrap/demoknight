@@ -573,7 +573,7 @@ if system().startswith("Win"):
 
     def check_local_group():
         group_name = win32security.LookupAccountSid(
-            None, win32security.ConvertStringSidToSid("S-1-5-32-558")
+            None, win32security.ConvertStringSidToSid("S-1-5-32-559")
         )[0]
         member_name = win32api.GetUserName()
         member_sid = win32security.LookupAccountName(None, win32api.GetUserName())[0]
@@ -587,6 +587,7 @@ if system().startswith("Win"):
                 " Log Users'.\nHow to fix:"
                 " https://github.com/GameTechDev/PresentMon#user-access-denied"
             )
+            sys.exit(1)
 
 
 if __name__ == "__main__":
