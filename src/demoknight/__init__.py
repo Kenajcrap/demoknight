@@ -19,6 +19,11 @@ from .test import Test
 
 if system().startswith("Win"):
     import winreg  # pylint: disable=import-error
+    from shutil import which
+
+    import win32api
+    import win32net
+    import win32security
 
 
 def main():
@@ -211,6 +216,7 @@ def main():
     parser.add_argument(
         "--presentmon-path",
         type=Path,
+        required=not bool(which("presentmon")),
         help="Path to PresentMon executable. Default: 'presentmon'",
     )
 
@@ -246,6 +252,9 @@ def main():
     # TODO: Check if tick is at the very start of a demo and refrain from
     # fast-fowarding instead.
     start_delay = 2
+
+    if system().startswith("Win"):
+        check_local_group()
 
     if not isinstance(numeric_loglevel, int):
         raise ValueError("Invalid log level: %s" % args.verbosity)
@@ -547,6 +556,26 @@ def try_parsing_file(path):
     except ValueError as e:
         raise Exception(f"Cannot parse {path} as {file_type} file\n{e}") from e
     return parsed
+
+
+if system().startswith("Win"):
+
+    def check_local_group():
+        group_name = win32security.LookupAccountSid(
+            None, win32security.ConvertStringSidToSid("S-1-5-32-558")
+        )[0]
+        member_name = win32api.GetUserName()
+        member_sid = win32security.LookupAccountName(None, win32api.GetUserName())[0]
+        members = win32net.NetLocalGroupGetMembers(None, group_name, 2)[0]
+        for member in members:
+            if member["sid"] == member_sid:
+                break
+        else:
+            print(
+                f"The user {member_name} isn't part of the local group 'Performance"
+                " Log Users'.\nHow to fix:"
+                " https://github.com/GameTechDev/PresentMon#user-access-denied"
+            )
 
 
 if __name__ == "__main__":
