@@ -125,6 +125,10 @@ class Game(psutil.Popen):
             else:
                 raise OSError("unknown steam_state")
 
+        # TODO: Handle ProcessAlreadyRunning
+        if self._find_game_proc(game_path):
+            raise Exception("Game is already running, close it and try again")
+
         # Clear log file before each run given we are spamming it so much
         logs = list(game_path.glob("./*/demoknight.log"))
         if len(logs) > 1:
@@ -138,10 +142,6 @@ class Game(psutil.Popen):
                 logging.info(f"{self.log_path} doesn't exists, continuig.")
         else:
             self.log_path = None
-
-        # TODO: Handle ProcessAlreadyRunning
-        if self._find_game_proc(game_path):
-            raise Exception("Game is already running, close it and try again")
 
         super().__init__(args, **kwargs)
 
