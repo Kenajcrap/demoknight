@@ -313,7 +313,7 @@ class Game(psutil.Popen):
     def _wait_for_console(self, regex_pattern):
         # print(steamdir)
         logpat = re.compile(regex_pattern)
-        for _ in watch(self.log_path):
+        for _ in watch(self.log_path, force_polling=system().startswith("Win")):
             if self.last_position > os.path.getsize(self.log_path):
                 self.last_position = 0
             with open(self.log_path) as f:
@@ -334,9 +334,10 @@ class Game(psutil.Popen):
                 raise Exception(
                     f"Could not check if Steam is running: Access Denied\n{e}"
                 ) from e
-            if "steam" in processes:
-                proc_env = proc.environ()
-                # if "MANGOHUD" not in proc_env:
+            if system().startswith("Linux"):
+                if "steam" in processes:
+                    proc_env = proc.environ()
+                    # if "MANGOHUD" not in proc_env:
                 if system().startswith("Linux"):
                     if "GAME_DEBUGGER" not in proc_env:
                         return SteamState.NO_MANGOHUD
