@@ -326,7 +326,7 @@ class Game(psutil.Popen):
                         return self.last_position
 
     @staticmethod
-    def _steam_state(env, **kwargs):
+    def _steam_state(env=[], **kwargs):
         for proc in psutil.process_iter():
             try:
                 processes = proc.name().lower()
@@ -334,11 +334,10 @@ class Game(psutil.Popen):
                 raise Exception(
                     f"Could not check if Steam is running: Access Denied\n{e}"
                 ) from e
-            if system().startswith("Linux"):
-                if "steam" in processes:
+            if "steam" in processes:
+                if system().startswith("Linux"):
                     proc_env = proc.environ()
                     # if "MANGOHUD" not in proc_env:
-                if system().startswith("Linux"):
                     if "GAME_DEBUGGER" not in proc_env:
                         return SteamState.NO_MANGOHUD
                     if "MANGOHUD_CONFIG" not in proc_env:
