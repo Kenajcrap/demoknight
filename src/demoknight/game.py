@@ -173,9 +173,14 @@ class Game(psutil.Popen):
             sleep(1)
 
         # Get log if I don't have it already
-        if not self.log_path:
-            p = Path(game_path)
-            self.log_path = list(game_path.glob("./*/demoknight.log"))[0]
+        while not self.log_path:
+            # Sometimes self.state becomes RUNNING too quickly on windows, meaning there
+            # isn't a log file yet
+            # TODO: Find a better solution
+            try:
+                self.log_path = list(game_path.glob("./*/demoknight.log"))[0]
+            except IndexError:
+                pass
 
     def update_state(self):
         last_not_running = 0
