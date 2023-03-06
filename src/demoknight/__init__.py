@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import re
 import sys
 from datetime import datetime
@@ -475,7 +476,7 @@ def find_game_dir(steam_dir, gameid):
         / "common"
         / appmanifest["AppState"]["installdir"]
     )
-
+    
     return game_dir
 
 
