@@ -279,10 +279,10 @@ class Game(psutil.Popen):
         if not self.watchdog_exceptions.empty():
             raise self.watchdog_exceptions.get()
         """'rcon quit', mark the instance as quitted, and remove the log file"""
-        os.remove(self.log_path)
         self.quitted = True
         self.rcon("quit")
         self.watchdog.join()
+        os.remove(self.log_path)
 
     def gototick(self, tick: int):
         if not self.watchdog_exceptions.empty():
