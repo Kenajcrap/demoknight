@@ -272,6 +272,8 @@ def main():
 
     # Include a job at the top of the list for baseline if required
     if not args.no_baseline:
+        if not args.tests:
+            args.tests = []
         args.tests.insert(0, {"changes": {}})
 
     # Main testing loop
