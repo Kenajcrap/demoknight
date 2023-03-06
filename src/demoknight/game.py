@@ -7,7 +7,6 @@ import socket
 import string
 import threading
 from enum import Enum
-from pathlib import Path
 from platform import system
 from random import SystemRandom, randint
 from time import sleep, time
@@ -130,7 +129,7 @@ class Game(psutil.Popen):
             raise Exception("Game is already running, close it and try again")
 
         # Clear log file before each run given we are spamming it so much
-        logs = list(game_path.glob("./*/demoknight.log"))
+        logs = list(game_path.parent.glob("./*/demoknight.log"))
         if len(logs) > 1:
             raise FileNotFoundError("More than one demoknight.log file was found")
         elif logs:
@@ -178,7 +177,7 @@ class Game(psutil.Popen):
             # isn't a log file yet
             # TODO: Find a better solution
             try:
-                self.log_path = list(game_path.glob("./*/demoknight.log"))[0]
+                self.log_path = list(game_path.parent.glob("./*/demoknight.log"))[0]
             except IndexError:
                 pass
 
