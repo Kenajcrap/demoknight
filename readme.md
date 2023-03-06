@@ -26,6 +26,8 @@ pip install control
 
 For Windows users, [PresentMon](https://github.com/GameTechDev/PresentMon) needs to be downloaded and either be accessible through `presentmon` (by adding it to PATH) or pointed to with `--presentmon-path` launch option.
 
+The user running the script needs to be part of the [Performance Log Users](https://github.com/GameTechDev/PresentMon#user-access-denied) user group
+
 After that, clone this repo and install using `pip`
 ```bash
 git clone https://github.com/kenajcrap/demoknight && cd demoknight
