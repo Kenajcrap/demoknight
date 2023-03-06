@@ -319,9 +319,9 @@ def main():
 
     # Import mangohud/presentmon data and set some constants
     if system().startswith("Win"):
-        usecols = (7, 9)
+        usecols = (9, 7)
         skiprows = 1
-        one_second = 1000000000
+        one_second = 1
     elif system().startswith("Linux"):
         usecols = (1, 11)
         skiprows = 3
