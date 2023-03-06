@@ -103,14 +103,14 @@ def main():
     parser.add_argument(
         "-l",
         "--launch-options",
+        nargs=1,
         default=[],
-        type=list,
-        nargs="+",
-        action="append",
+        action=SplitSimple,
         help=(
             "Additional launch options to use for every test, added to the ones gotten"
             " from steam if using --gameid. If using --gamepath, don't forget required"
-            " launch options like '-game'"
+            " launch options like '-game'. For multiple arguments, use the form"
+            " '-l=\"-option1 -option2\"')"
         ),
     )
 
@@ -419,6 +419,12 @@ class StoreTrueFalseAction(argparse.Action):
             raise argparse.ArgumentError(self, f"Invalid boolean value: {values}")
 
 
+class SplitSimple(argparse.Action):
+    def __call__(self, _, namespace, values, option_string=None):
+        if values:
+            setattr(namespace, self.dest, values[0].split(" "))
+
+
 def find_steam_dir():
     if system().startswith("Linux"):
         steam_dir = Path("~/.steam/steam").expanduser()
@@ -477,7 +483,9 @@ def find_game_dir(steam_dir, gameid):
         / appmanifest["AppState"]["installdir"]
     )
     
-    return game_dir
+    for i in game_dir.iterdir():
+        if i.is_file() and os.access(i, os.X_OK):
+            return i
 
 
 # Currently unused function, maybe useful later
