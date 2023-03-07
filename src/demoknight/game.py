@@ -272,7 +272,8 @@ class Game(psutil.Popen):
             if not self.watchdog_exceptions.empty():
                 raise self.watchdog_exceptions.get()
             sleep(1)
-        self.rcon("demo_timescale 1")
+        self._wait_for_console(r"Demo message")
+        self.rcon("demo_timescale 1; demo_debug 0")
 
     def quit(self):
         if not self.watchdog_exceptions.empty():
