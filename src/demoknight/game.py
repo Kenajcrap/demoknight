@@ -266,7 +266,7 @@ class Game(psutil.Popen):
         """
         Start demo playback and wait for demo to load
         """
-        self.rcon(f"playdemo {demo}; demo_timescale 0.005")
+        self.rcon(f"playdemo {demo}; demo_debug 1; demo_timescale 0.05")
         # Wait for the game to finish loading
         while not self.state.value == GameState.RUNNING.value:
             if not self.watchdog_exceptions.empty():
