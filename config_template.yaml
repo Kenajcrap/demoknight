@@ -18,8 +18,8 @@ format: "csv"
 tests:
   - name:
     changes:
-      - cvar:
-          -
-        launch-options:
-          -
+      cvar:
+        -
+      launch-options:
+        -
             

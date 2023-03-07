@@ -275,7 +275,7 @@ def main():
     if not args.no_baseline:
         if not args.tests:
             args.tests = []
-        args.tests.insert(0, {"changes": {}})
+        args.tests.insert(0, {"name":"baseline","changes": {}})
 
     # Main testing loop
 
@@ -349,10 +349,10 @@ def main():
             json.dump(summary, outfile)
         elif args.format == "csv":
             writer = csv.DictWriter(outfile, fieldnames=["name", "average", "variance"])
+            writer.writeheader()
             for test in summary:
                 test["name"] = [test["name"]] * len(test["average"])
                 v2 = [dict(zip(test, t)) for t in zip(*test.values())]
-                writer.writeheader()
                 writer.writerows(v2)
     print("done")
 
