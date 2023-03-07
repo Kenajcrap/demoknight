@@ -22,7 +22,7 @@ class Test:
 
     required_mangohud_conf = ["no_display=1", "log_interval=0", "control=mangohud"]
 
-    required_presentmon_conf = ["-terminate_after_timed"]
+    required_presentmon_conf = ["-terminate_after_timed", "-stop_existing_session"]
 
     game_environ = environ.copy()
     game_environ.update({"GAME_DEBUGGER": "mangohud"})
