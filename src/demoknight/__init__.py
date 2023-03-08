@@ -104,7 +104,7 @@ def main():
         "-l",
         "--launch-options",
         nargs=1,
-        default=[],
+        default=(),
         action=SplitSimple,
         help=(
             "Additional launch options to use for every test, added to the ones gotten"
@@ -380,9 +380,9 @@ class SplitArgs(argparse.Action):
     def _make_test(self, test):
         prefix = test[0][0] or None
         if prefix == "+":
-            return {"cvar": [" ".join(test)[1:]]}
+            return {"cvars": (" ".join(test)[1:],)}
         elif prefix == "_":
-            return {"launch_options": [f"-{' '.join(test)[1:]}"]}
+            return {"launch_options": (f"-{' '.join(test)[1:]}",)}
 
 
 class StoreTrueFalseAction(argparse.Action):
@@ -422,7 +422,7 @@ class StoreTrueFalseAction(argparse.Action):
 class SplitSimple(argparse.Action):
     def __call__(self, _, namespace, values, option_string=None):
         if values:
-            setattr(namespace, self.dest, values[0].split(" "))
+            setattr(namespace, self.dest, tuple(values[0].split(" ")))
 
 
 def find_steam_dir():
@@ -482,7 +482,7 @@ def find_game_dir(steam_dir, gameid):
         / "common"
         / appmanifest["AppState"]["installdir"]
     )
-    
+
     for i in game_dir.iterdir():
         if i.is_file() and os.access(i, os.X_OK):
             return i

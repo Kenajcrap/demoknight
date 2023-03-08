@@ -31,7 +31,7 @@ class Game(psutil.Popen):
     rudimentary way.
     """
 
-    required_launch_options = [
+    required_launch_options = (
         "+con_logfile",
         "demoknight.log",
         "-usercon",
@@ -51,9 +51,11 @@ class Game(psutil.Popen):
         # "+con_timestamp", "1", "+alias", "con_timestamp",
         # "+net_showmsg", "svc_UserMessage",
         # "+alias", "net_showmsg"
-    ]
+    )
 
-    def __init__(self, gameid=0, game_path=None, steam_path=None, l_opts=[], **kwargs):
+    def __init__(
+        self, gameid=0, game_path=None, steam_path=None, l_opts=tuple(), **kwargs
+    ):
         self.password = self._rand_pass()
         self.port = self._free_port()
         self.quitted = False
@@ -65,7 +67,7 @@ class Game(psutil.Popen):
         all_launch_options = (
             l_opts
             + Game.required_launch_options
-            + [
+            + (
                 "+rcon_password",
                 self.password,
                 "+alias",
@@ -75,7 +77,7 @@ class Game(psutil.Popen):
                 "+alias",
                 "hostport",
                 "+net_start",
-            ]
+            )
         )
 
         if gameid:
@@ -87,10 +89,10 @@ class Game(psutil.Popen):
             elif system().startswith("Linux"):
                 steam_bin = "steam"
 
-            args = [str(steam_bin), "-applaunch", str(gameid)] + all_launch_options
+            args = (str(steam_bin), "-applaunch", str(gameid)) + all_launch_options
 
         else:
-            args = [game_path] + all_launch_options
+            args = (game_path,) + all_launch_options
 
         # Check if steam is setup correctly, only start job if it is not running or
         # if it has the correct mangohud config already
@@ -129,7 +131,7 @@ class Game(psutil.Popen):
             raise Exception("Game is already running, close it and try again")
 
         # Clear log file before each run given we are spamming it so much
-        logs = list(game_path.parent.glob("./*/demoknight.log"))
+        logs = tuple(game_path.parent.glob("./*/demoknight.log"))
         if len(logs) > 1:
             raise FileNotFoundError("More than one demoknight.log file was found")
         elif logs:
@@ -177,7 +179,7 @@ class Game(psutil.Popen):
             # isn't a log file yet
             # TODO: Find a better solution
             try:
-                self.log_path = list(game_path.parent.glob("./*/demoknight.log"))[0]
+                self.log_path = tuple(game_path.parent.glob("./*/demoknight.log"))[0]
             except IndexError:
                 pass
 
@@ -292,8 +294,8 @@ class Game(psutil.Popen):
         game has ramped to full fastfoward speed, it may overshoot the desired tick. So
         this actually runs demo_gototick twice. Once to approach, and the other to the
         """
-        # Lower timescale too much and the game becomes unresponsive, lower too little 
-        # and you can't start respond fast enough, and have to increase the buffer 
+        # Lower timescale too much and the game becomes unresponsive, lower too little
+        # and you can't start respond fast enough, and have to increase the buffer
         # between gototicks and prevent the start of the demo from being used
         self.rcon(f"demo_debug 1; demo_gototick {tick-40} 0 0; demo_timescale 0.1")
         self._wait_for_console(r"Demo message, tick " + str(tick - 40) + r",")
@@ -332,7 +334,7 @@ class Game(psutil.Popen):
                         return self.last_position
 
     @staticmethod
-    def _steam_state(env=[], **kwargs):
+    def _steam_state(env=(), **kwargs):
         for proc in psutil.process_iter():
             try:
                 processes = proc.name().lower()

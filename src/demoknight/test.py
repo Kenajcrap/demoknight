@@ -20,9 +20,9 @@ class Test:
     Takes care of controlling the game and capture software, and applying changes
     """
 
-    required_mangohud_conf = ["no_display=1", "log_interval=0", "control=mangohud"]
+    required_mangohud_conf = ("no_display=1", "log_interval=0", "control=mangohud")
 
-    required_presentmon_conf = ["-terminate_after_timed", "-stop_existing_session"]
+    required_presentmon_conf = ("-terminate_after_timed", "-stop_existing_session")
 
     game_environ = environ.copy()
     game_environ.update({"GAME_DEBUGGER": "mangohud"})
@@ -47,10 +47,10 @@ class Test:
             kwargs.update(env=environ.copy())
 
         elif system().startswith("Linux"):
-            specific_mangohud_conf = [
+            specific_mangohud_conf = (
                 f"log_duration={args.duration + start_delay}",
                 f"output_folder={args.raw_path.absolute()}",
-            ]
+            )
             mangohud_conf = ",".join(
                 Test.required_mangohud_conf + specific_mangohud_conf
             )
@@ -69,10 +69,8 @@ class Test:
             gameid=args.gameid,
             game_path=args.game_path,
             steam_path=args.steam_path,
-            l_opts=(
-                args.launch_options
-                + args.tests[self.index]["changes"].get("launch-options", [])
-            ),
+            l_opts=args.launch_options
+            + tuple(i for i in test_launch_options if i is not None),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -124,7 +122,7 @@ class Test:
 
             gm.not_capturing.clear()
             if system().startswith("Win"):
-                specific_presentmon_conf = [
+                specific_presentmon_conf = (
                     "-timed",
                     str(args.duration + start_delay),
                     "-process_id",
@@ -134,9 +132,9 @@ class Test:
                         args.raw_path.absolute()
                         / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
                     ),
-                ]
+                )
                 Popen(
-                    [args.presentmon_path]
+                    (args.presentmon_path,)
                     + specific_presentmon_conf
                     + Test.required_presentmon_conf
                 )
