@@ -275,7 +275,31 @@ def main():
     if not args.no_baseline:
         if not args.tests:
             args.tests = []
-        args.tests.insert(0, {"name":"baseline","changes": {}})
+        args.tests.insert(0, {"name": "baseline", "changes": {}})
+
+    # Check for duplicate tests and generate test names if empty
+    names = [n["name"] for n in args.tests if n["name"] is not None]
+    if len(names) != len(set(names)):
+        raise ValueError("Multiple tests with the same name")
+    for t in args.tests:
+        if t.get("changes") and not t.get("name"):
+            concat_changes = (
+                " ".join(
+                    " ".join([i for i in x if i is not None])
+                    for x in t["changes"].values()
+                )
+                if not " "
+                else "baseline"
+            )
+            timeout = 0
+            while timeout < 50:
+                if concat_changes in names:
+                    concat_changes = f"{concat_changes}_{timeout}"
+                else:
+                    names.append(concat_changes)
+                    t["name"] = concat_changes
+                    break
+                timeout = +1
 
     # Main testing loop
 
