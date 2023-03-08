@@ -579,7 +579,7 @@ def try_parsing_file(path):
         def _file_load(path):
             try:
                 with open(path, encoding="utf-8") as cur_file:
-                    return yaml.load(cur_file, Loader=yaml.FullLoader)
+                    return yaml.safe_load(cur_file)
             except OSError as e:
                 raise Exception(f"Cannot find {path} \n{e}") from e
 
