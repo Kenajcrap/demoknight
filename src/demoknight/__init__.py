@@ -614,5 +614,19 @@ if system().startswith("Win"):
             sys.exit(1)
 
 
+def construct_yaml_tuple(self, node):
+    seq = self.construct_sequence(node)
+    # only make "leaf sequences" into tuples, you can add dict
+    # and other types as necessary
+    if seq and isinstance(seq[0], (list, tuple, dict)):
+        return seq
+    return tuple(seq)
+
+
+yaml.add_constructor(
+    "tag:yaml.org,2002:seq", construct_yaml_tuple, Loader=yaml.SafeLoader
+)
+
+
 if __name__ == "__main__":
     main()
