@@ -18,7 +18,7 @@ format: "csv"
 tests:
   - name:
     changes:
-      cvar:
+      cvars:
         -
       launch-options:
         -
