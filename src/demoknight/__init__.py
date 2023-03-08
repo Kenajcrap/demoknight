@@ -332,6 +332,7 @@ def main():
     for test in tests:
         success = False
         while not success:
+            print(f"Starting test {test.name}")
             try:
                 test.capture(args, start_delay)
             except NoSuchProcess:

@@ -28,10 +28,7 @@ class Test:
     game_environ.update({"GAME_DEBUGGER": "mangohud"})
 
     def __init__(self, args, index):
-        concat_changes = " ".join(
-            " ".join(x) for x in args.tests[index]["changes"].values()
-        )
-        self.name = args.tests[index].get("name") or (concat_changes or "baseline")
+        self.name = args.tests[index]["name"]
         self.results = []
         self.index = index
 
@@ -64,6 +61,7 @@ class Test:
                 "Unsupported OS, this tool is only available for Windows and Linux"
             )
 
+        test_launch_options = args.tests[self.index]["changes"].get("launch-options", ())
         # Start game and wait for it to finish loading
         gm = Game(
             gameid=args.gameid,
