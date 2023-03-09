@@ -354,11 +354,13 @@ def main():
     if system().startswith("Win"):
         usecols = (9, 7)
         skiprows = 1
-        one_second = 1
+        elapsed_second = 1
+        frametime_ms = 1
     elif system().startswith("Linux"):
         usecols = (1, 11)
         skiprows = 3
-        one_second = 1000000000
+        elapsed_second = 1000000000
+        frametime_ms = 1000
     summary = []
     for test in tests:
         entry = {"name": test.name, "average": [], "variance": []}
@@ -368,10 +370,10 @@ def main():
             arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
             # We actually start capturing 2 seconds before we need to, so get
             # rid of those rows
-            arr[:, 1] -= start_delay * one_second
+            arr[:, 1] -= start_delay * elapsed_second
             arr = arr[arr[..., 1] >= 0]
-            entry["average"].append(np.average(arr[:, 0], axis=0))
-            entry["variance"].append(np.var(arr[:, 0], axis=0))
+            entry["average"].append(np.average(arr[:, 0]/frametime_ms, axis=0))
+            entry["variance"].append(np.var(arr[:, 0]/frametime_ms, axis=0))
 
         summary.append(entry)
     with open(f"{args.output_file}.{args.format}", "w", newline='', encoding="utf-8") as outfile:
