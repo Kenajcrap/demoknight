@@ -92,7 +92,7 @@ class Test:
             if len(tictoc) > 50 and abs(mean - diff < diff * 0.01):
                 break
 
-        for _ in range(args.passes):
+        for i in range(args.passes):
             # Apply cvars for each test
             for ch in args.tests[self.index]["changes"].get("cvars", []):
                 gm.rcon(ch)
@@ -157,6 +157,7 @@ class Test:
             logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 
             self.results.append(logs[0])
+            print(f"Finished pass {i}")
 
         gm.quit()
         sleep(10)
