@@ -60,8 +60,7 @@ def main():
         # unless the options are empty strings
         for k, v in file_dict.items():
             if v not in ("", None):
-                rest_argv.insert(0, str(v))
-                rest_argv.insert(0, f"--{k}")
+                rest_argv.insert(0, f"--{k}={str(v)}")
 
         argv_and_parsed = argv + list(file_dict.keys())
     else:
