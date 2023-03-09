@@ -17,9 +17,9 @@ versodity: "WARNING"
 format: "csv"
 tests:
   - name:
+    game-path:
     changes:
       cvars:
         -
       launch-options:
         -
-            
