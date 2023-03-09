@@ -368,7 +368,7 @@ def main():
             entry["average"].append(np.average(arr[:, 0], axis=0))
             entry["variance"].append(np.var(arr[:, 0], axis=0))
 
-            summary.append(entry)
+        summary.append(entry)
     with open(f"{args.output_file}.{args.format}", "w", encoding="utf-8") as outfile:
         if args.format == "json":
             json.dump(summary, outfile)
