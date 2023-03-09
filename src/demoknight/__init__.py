@@ -369,7 +369,7 @@ def main():
             entry["variance"].append(np.var(arr[:, 0], axis=0))
 
         summary.append(entry)
-    with open(f"{args.output_file}.{args.format}", "w", encoding="utf-8") as outfile:
+    with open(f"{args.output_file}.{args.format}", "w", newline='', encoding="utf-8") as outfile:
         if args.format == "json":
             json.dump(summary, outfile)
         elif args.format == "csv":
