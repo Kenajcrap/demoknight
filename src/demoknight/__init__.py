@@ -56,6 +56,13 @@ def main():
         if file_dict and "tests" in file_dict:
             args.tests = file_dict.pop("tests", [])
 
+        # Take the list of percentiles out, we will treat them sepparately
+        if file_dict and "percentiles" in file_dict:
+            args.percentiles = file_dict.pop("percentiles", [])
+            for prcnt in args.percentiles:
+                if not isinstance(prcnt, (float, int)):
+                    raise ValueError("Percentiles must be numbers")
+
         # The rest goes in a string to be parsed the same as command line options,
         # unless the options are empty strings
         for k, v in file_dict.items():
@@ -301,7 +308,7 @@ def main():
                         break
                     timeout = +1
         else:
-            t["changes"]={}
+            t["changes"] = {}
         if t.get("game-path"):
                 t["game-path"] = Path(t["game-path"])
         
@@ -363,7 +370,14 @@ def main():
         frametime_ms = 1000
     summary = []
     for test in tests:
-        entry = {"name": test.name, "average": [], "variance": []}
+        entry = {
+            "name": test.name,
+            "Average Frametime": [],
+            "Variance of Frametime": [],
+        }
+        for n in args.percentiles:
+            if n:
+                entry[f"{n}% High of Frametime"] = []
         for i, res in enumerate(test.results):
             if i == 0 and not args.keep_first_pass:
                 continue
@@ -372,12 +386,24 @@ def main():
             # rid of those rows
             arr[:, 1] -= start_delay * elapsed_second
             arr = arr[arr[..., 1] >= 0]
-            entry["average"].append(np.average(arr[:, 0]/frametime_ms, axis=0))
-            entry["variance"].append(np.var(arr[:, 0]/frametime_ms, axis=0))
+            entry["Average Frametime"].append(
+                np.average(arr[:, 0] / frametime_ms, axis=0)
+            )
+            entry["Variance of Frametime"].append(
+                np.var(arr[:, 0] / frametime_ms, axis=0)
+            )
+            for n in args.percentiles:
+                if n:
+                    entry[f"{n}% High of Frametime"].append(
+                        np.percentile(arr[:, 0] / frametime_ms, 100 - n, axis=0)
+                    )
 
         summary.append(entry)
     with open(
-        f"{args.output_file.absolute()}.{args.format}", "w", newline="", encoding="utf-8"
+        f"{args.output_file.absolute()}.{args.format}",
+        "w",
+        newline="",
+        encoding="utf-8",
     ) as outfile:
         if args.format == "json":
             json.dump(summary, outfile)
