@@ -58,7 +58,7 @@ def main():
 
         # Take the list of percentiles out, we will treat them sepparately
         if file_dict:
-            args.percentiles = file_dict.pop("percentiles", [])
+            args.percentiles = file_dict.pop("percentiles", [0.1, 1])
             for prcnt in args.percentiles:
                 if not isinstance(prcnt, (float, int)):
                     raise ValueError("Percentiles must be numbers")
@@ -411,10 +411,10 @@ def main():
         if args.format == "json":
             json.dump(summary, outfile)
         elif args.format == "csv":
-            writer = csv.DictWriter(outfile, fieldnames=["name", "average", "variance"])
+            writer = csv.DictWriter(outfile, fieldnames=["name", "Average Frametime", "Variance of Frametime"])
             writer.writeheader()
             for test in summary:
-                test["name"] = [test["name"]] * len(test["average"])
+                test["name"] = [test["name"]] * len(test["Average Frametime"])
                 v2 = [dict(zip(test, t)) for t in zip(*test.values())]
                 writer.writerows(v2)
     print("done")
