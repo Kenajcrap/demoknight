@@ -319,15 +319,18 @@ def main():
     # TODO: Improve ETA with real life data
     eta = (
         (
-            10  # load game
-            + 5  # load demo
-            + (start_delay)  # delay
-            + args.duration  # demo playback
-            + (args.start_tick / (args.tickrate or 66) / 20)
-        )  # fastfoward
-        * (args.passes)
-        * 1.2
-        * len(args.tests)
+            (
+                +3  # load demo
+                + (start_delay)  # delay
+                + args.duration  # demo playback
+                + (args.start_tick / (args.tickrate or 66) / 20)  # fastfoward
+            )
+            * (args.passes)
+            * 1.1
+        )
+        + 10  # Load game
+    ) * len(
+        args.tests
     )  # passes
     logging.info(f"ETA: {eta} seconds")
     if eta > 3600:
