@@ -53,11 +53,11 @@ def main():
         file_dict = try_parsing_file(args.job_file)
 
         # Take the list of tests out, we will treat them sepparately
-        if file_dict and "tests" in file_dict:
+        if file_dict:
             args.tests = file_dict.pop("tests", [])
 
         # Take the list of percentiles out, we will treat them sepparately
-        if file_dict and "percentiles" in file_dict:
+        if file_dict:
             args.percentiles = file_dict.pop("percentiles", [])
             for prcnt in args.percentiles:
                 if not isinstance(prcnt, (float, int)):
