@@ -41,7 +41,7 @@ demoknight -G /Games/SteamLibrary/steamapps/common/Team\ Fortress\ 2/hl2.sh --la
 ```
 A list of options is available doing `demoknight -h`
 
-There is also a [template]() for the `--job_file` file available
+There is also a [template](https://github.com/Kenajcrap/demoknight/blob/main/config_template.yaml) for the `--job_file` file available
 ## Planned Improvements
 In order of expedience
 
