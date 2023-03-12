@@ -46,7 +46,10 @@ class Test:
         elif system().startswith("Linux"):
             specific_mangohud_conf = (
                 f"log_duration={args.duration + start_delay}",
-                f"output_folder={args.raw_path.absolute()}",
+                (
+                    "output_folder"
+                    f"={args.raw_path.absolute() / args.output_file / self.name}"
+                ),
             )
             mangohud_conf = ",".join(
                 Test.required_mangohud_conf + specific_mangohud_conf
@@ -61,7 +64,9 @@ class Test:
                 "Unsupported OS, this tool is only available for Windows and Linux"
             )
 
-        test_launch_options = args.tests[self.index]["changes"].get("launch-options", ())
+        test_launch_options = args.tests[self.index]["changes"].get(
+            "launch-options", ()
+        )
         # Start game and wait for it to finish loading
         gm = Game(
             gameid=args.gameid,
@@ -128,6 +133,8 @@ class Test:
                     "-output_file",
                     str(
                         args.raw_path.absolute()
+                        / args.output_file
+                        / self.name
                         / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
                     ),
                 )
@@ -152,7 +159,7 @@ class Test:
             gm.rcon("disconnect")
             sleep(0.5)
 
-            p = args.raw_path.absolute()
+            p = args.raw_path.absolute() / args.output_file / self.name
             logs = list(p.glob("./*[0-9].csv"))
             logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 

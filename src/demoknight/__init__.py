@@ -267,12 +267,6 @@ def main():
         raise ValueError("Invalid log level: %s" % args.verbosity)
     logging.basicConfig(level=numeric_loglevel)
 
-    # Create log folder if it doesn't exist
-    try:
-        args.raw_path.absolute().mkdir()
-    except FileExistsError:
-        pass
-
     # Find game if gameid is specified
     if args.gameid:
         args.game_path = find_game_dir(args.steam_path, args.gameid)
@@ -310,8 +304,14 @@ def main():
         else:
             t["changes"] = {}
         if t.get("game-path"):
-                t["game-path"] = Path(t["game-path"])
-        
+            t["game-path"] = Path(t["game-path"])
+
+    # Create log folder if it doesn't exist
+
+    for n in [i["name"] for i in args.tests]:
+        (args.raw_path.absolute() / args.output_file.name / n).mkdir(
+            parents=True, exist_ok=True
+        )
 
     # Main testing loop
 
