@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import re
 import sys
 from datetime import datetime
@@ -19,6 +20,11 @@ from .test import Test
 
 if system().startswith("Win"):
     import winreg  # pylint: disable=import-error
+    from shutil import which
+
+    import win32api
+    import win32net
+    import win32security
 
 
 def main():
@@ -47,15 +53,21 @@ def main():
         file_dict = try_parsing_file(args.job_file)
 
         # Take the list of tests out, we will treat them sepparately
-        if file_dict and "tests" in file_dict:
+        if file_dict:
             args.tests = file_dict.pop("tests", [])
+
+        # Take the list of percentiles out, we will treat them sepparately
+        if file_dict:
+            args.percentiles = file_dict.pop("percentiles", [0.1, 1])
+            for prcnt in args.percentiles:
+                if not isinstance(prcnt, (float, int)):
+                    raise ValueError("Percentiles must be numbers")
 
         # The rest goes in a string to be parsed the same as command line options,
         # unless the options are empty strings
         for k, v in file_dict.items():
             if v not in ("", None):
-                rest_argv.insert(0, str(v))
-                rest_argv.insert(0, f"--{k}")
+                rest_argv.insert(0, f"--{k}={str(v)}")
 
         argv_and_parsed = argv + list(file_dict.keys())
     else:
@@ -97,14 +109,14 @@ def main():
     parser.add_argument(
         "-l",
         "--launch-options",
-        default=[],
-        type=list,
-        nargs="+",
-        action="append",
+        nargs=1,
+        default=(),
+        action=SplitSimple,
         help=(
             "Additional launch options to use for every test, added to the ones gotten"
             " from steam if using --gameid. If using --gamepath, don't forget required"
-            " launch options like '-game'"
+            " launch options like '-game'. For multiple arguments, use the form"
+            " '-l=\"-option1 -option2\"')"
         ),
     )
 
@@ -211,6 +223,7 @@ def main():
     parser.add_argument(
         "--presentmon-path",
         type=Path,
+        required=not bool(which("presentmon")),
         help="Path to PresentMon executable. Default: 'presentmon'",
     )
 
@@ -247,15 +260,12 @@ def main():
     # fast-fowarding instead.
     start_delay = 2
 
+    if system().startswith("Win"):
+        check_local_group()
+
     if not isinstance(numeric_loglevel, int):
         raise ValueError("Invalid log level: %s" % args.verbosity)
     logging.basicConfig(level=numeric_loglevel)
-
-    # Create log folder if it doesn't exist
-    try:
-        args.raw_path.absolute().mkdir()
-    except FileExistsError:
-        pass
 
     # Find game if gameid is specified
     if args.gameid:
@@ -263,7 +273,45 @@ def main():
 
     # Include a job at the top of the list for baseline if required
     if not args.no_baseline:
-        args.tests.insert(0, {"changes": {}})
+        if not args.tests:
+            args.tests = []
+        args.tests.insert(0, {"name": "baseline", "changes": {}})
+
+    # Check for duplicate tests and generate test names and changes if empty
+    names = [n["name"] for n in args.tests if n["name"] is not None]
+    if len(names) != len(set(names)):
+        raise ValueError("Multiple tests with the same name")
+    for t in args.tests:
+        if t.get("changes"):
+            if not t.get("name"):
+                concat_changes = (
+                    " ".join(
+                        " ".join([i for i in x if i is not None])
+                        for x in t["changes"].values()
+                    )
+                    if not " "
+                    else "baseline"
+                )
+                timeout = 0
+                while timeout < 50:
+                    if concat_changes in names:
+                        concat_changes = f"{concat_changes}_{timeout}"
+                    else:
+                        names.append(concat_changes)
+                        t["name"] = concat_changes
+                        break
+                    timeout = +1
+        else:
+            t["changes"] = {}
+        if t.get("game-path"):
+            t["game-path"] = Path(t["game-path"])
+
+    # Create log folder if it doesn't exist
+
+    for n in [i["name"] for i in args.tests]:
+        (args.raw_path.absolute() / args.output_file.name / n).mkdir(
+            parents=True, exist_ok=True
+        )
 
     # Main testing loop
 
@@ -271,15 +319,18 @@ def main():
     # TODO: Improve ETA with real life data
     eta = (
         (
-            10  # load game
-            + 5  # load demo
-            + (start_delay)  # delay
-            + args.duration  # demo playback
-            + (args.start_tick / (args.tickrate or 66) / 20)
-        )  # fastfoward
-        * (args.passes)
-        * 1.2
-        * len(args.tests)
+            (
+                +3  # load demo
+                + (start_delay)  # delay
+                + args.duration  # demo playback
+                + (args.start_tick / (args.tickrate or 66) / 20)  # fastfoward
+            )
+            * (args.passes)
+            * 1.1
+        )
+        + 10  # Load game
+    ) * len(
+        args.tests
     )  # passes
     logging.info(f"ETA: {eta} seconds")
     if eta > 3600:
@@ -296,6 +347,7 @@ def main():
     for test in tests:
         success = False
         while not success:
+            print(f"Starting test {test.name}")
             try:
                 test.capture(args, start_delay)
             except NoSuchProcess:
@@ -310,37 +362,60 @@ def main():
 
     # Import mangohud/presentmon data and set some constants
     if system().startswith("Win"):
-        usecols = (7, 9)
+        usecols = (9, 7)
         skiprows = 1
-        one_second = 1000000000
+        elapsed_second = 1
+        frametime_ms = 1
     elif system().startswith("Linux"):
         usecols = (1, 11)
         skiprows = 3
-        one_second = 1000000000
+        elapsed_second = 1000000000
+        frametime_ms = 1000
     summary = []
     for test in tests:
-        entry = {"name": test.name, "average": [], "variance": []}
+        entry = {
+            "name": test.name,
+            "Average Frametime": [],
+            "Variance of Frametime": [],
+        }
+        for n in args.percentiles:
+            if n:
+                entry[f"{n}% High of Frametime"] = []
         for i, res in enumerate(test.results):
             if i == 0 and not args.keep_first_pass:
                 continue
             arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
             # We actually start capturing 2 seconds before we need to, so get
             # rid of those rows
-            arr[:, 1] -= start_delay * one_second
+            arr[:, 1] -= start_delay * elapsed_second
             arr = arr[arr[..., 1] >= 0]
-            entry["average"].append(np.average(arr[:, 0], axis=0))
-            entry["variance"].append(np.var(arr[:, 0], axis=0))
+            entry["Average Frametime"].append(
+                np.average(arr[:, 0] / frametime_ms, axis=0)
+            )
+            entry["Variance of Frametime"].append(
+                np.var(arr[:, 0] / frametime_ms, axis=0)
+            )
+            for n in args.percentiles:
+                if n:
+                    entry[f"{n}% High of Frametime"].append(
+                        np.percentile(arr[:, 0] / frametime_ms, 100 - n, axis=0)
+                    )
 
-            summary.append(entry)
-    with open(f"{args.output_file}.{args.format}", "w", encoding="utf-8") as outfile:
+        summary.append(entry)
+    with open(
+        f"{args.output_file.absolute()}.{args.format}",
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as outfile:
         if args.format == "json":
             json.dump(summary, outfile)
         elif args.format == "csv":
-            writer = csv.DictWriter(outfile, fieldnames=["name", "average", "variance"])
+            writer = csv.DictWriter(outfile, fieldnames=["name", "Average Frametime", "Variance of Frametime"])
+            writer.writeheader()
             for test in summary:
-                test["name"] = [test["name"]] * len(test["average"])
+                test["name"] = [test["name"]] * len(test["Average Frametime"])
                 v2 = [dict(zip(test, t)) for t in zip(*test.values())]
-                writer.writeheader()
                 writer.writerows(v2)
     print("done")
 
@@ -368,9 +443,9 @@ class SplitArgs(argparse.Action):
     def _make_test(self, test):
         prefix = test[0][0] or None
         if prefix == "+":
-            return {"cvar": [" ".join(test)[1:]]}
+            return {"cvars": (" ".join(test)[1:],)}
         elif prefix == "_":
-            return {"launch_options": [f"-{' '.join(test)[1:]}"]}
+            return {"launch_options": (f"-{' '.join(test)[1:]}",)}
 
 
 class StoreTrueFalseAction(argparse.Action):
@@ -405,6 +480,12 @@ class StoreTrueFalseAction(argparse.Action):
             setattr(namespace, self.dest, False)
         else:
             raise argparse.ArgumentError(self, f"Invalid boolean value: {values}")
+
+
+class SplitSimple(argparse.Action):
+    def __call__(self, _, namespace, values, option_string=None):
+        if values:
+            setattr(namespace, self.dest, tuple(values[0].split(" ")))
 
 
 def find_steam_dir():
@@ -465,7 +546,9 @@ def find_game_dir(steam_dir, gameid):
         / appmanifest["AppState"]["installdir"]
     )
 
-    return game_dir
+    for i in game_dir.iterdir():
+        if i.is_file() and os.access(i, os.X_OK):
+            return i
 
 
 # Currently unused function, maybe useful later
@@ -535,7 +618,7 @@ def try_parsing_file(path):
         def _file_load(path):
             try:
                 with open(path, encoding="utf-8") as cur_file:
-                    return yaml.load(cur_file, Loader=yaml.FullLoader)
+                    return yaml.safe_load(cur_file)
             except OSError as e:
                 raise Exception(f"Cannot find {path} \n{e}") from e
 
@@ -547,6 +630,41 @@ def try_parsing_file(path):
     except ValueError as e:
         raise Exception(f"Cannot parse {path} as {file_type} file\n{e}") from e
     return parsed
+
+
+if system().startswith("Win"):
+
+    def check_local_group():
+        group_name = win32security.LookupAccountSid(
+            None, win32security.ConvertStringSidToSid("S-1-5-32-559")
+        )[0]
+        member_name = win32api.GetUserName()
+        member_sid = win32security.LookupAccountName(None, win32api.GetUserName())[0]
+        members = win32net.NetLocalGroupGetMembers(None, group_name, 2)[0]
+        for member in members:
+            if member["sid"] == member_sid:
+                break
+        else:
+            print(
+                f"The user {member_name} isn't part of the local group 'Performance"
+                " Log Users'.\nHow to fix:"
+                " https://github.com/GameTechDev/PresentMon#user-access-denied"
+            )
+            sys.exit(1)
+
+
+def construct_yaml_tuple(self, node):
+    seq = self.construct_sequence(node)
+    # only make "leaf sequences" into tuples, you can add dict
+    # and other types as necessary
+    if seq and isinstance(seq[0], (list, tuple, dict)):
+        return seq
+    return tuple(seq)
+
+
+yaml.add_constructor(
+    "tag:yaml.org,2002:seq", construct_yaml_tuple, Loader=yaml.SafeLoader
+)
 
 
 if __name__ == "__main__":

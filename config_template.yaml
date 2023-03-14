@@ -6,20 +6,23 @@ demo-path:             # Required
 raw-path:              # Default: Your OS's temp folder
 steam-path:            # Default: Automatic
 output-file:           # Default: 'summary_%Y-%m-%d_%H-%M-%S'
-launch-options:
+launch-options:        # Use double quotes for multiple launch options
 passes: 5
 keep-first-pass: True
-start-tick: 153
+start-tick: 200
 duration: 20.0
 tickrate: 66.6
 no-baseline: False
 versodity: "WARNING"
 format: "csv"
+percentiles:
+  - 0.1
+  - 1
 tests:
   - name:
+    game-path:
     changes:
-      - cvar:
-          -
-        launch-options:
-          -
-            
+      cvars:
+        -
+      launch-options:
+        -

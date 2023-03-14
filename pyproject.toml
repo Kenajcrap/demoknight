@@ -23,6 +23,7 @@ dependencies = [
     "steamid",
     "watchfiles",
     "pyyaml",
+    "pywin32; platform_system=='Windows'",
     "mangohud-control; platform_system=='Linux'"
 ]
 version = "0.0.1"

@@ -1,6 +1,7 @@
 import logging
 import re
 from argparse import Namespace
+from datetime import datetime
 from os import environ
 from platform import system
 from time import perf_counter, sleep
@@ -19,18 +20,15 @@ class Test:
     Takes care of controlling the game and capture software, and applying changes
     """
 
-    required_mangohud_conf = ["no_display=1", "log_interval=0", "control=mangohud"]
+    required_mangohud_conf = ("no_display=1", "log_interval=0", "control=mangohud")
 
-    required_presentmon_conf = ["-terminate_after_timed"]
+    required_presentmon_conf = ("-terminate_after_timed", "-stop_existing_session")
 
     game_environ = environ.copy()
     game_environ.update({"GAME_DEBUGGER": "mangohud"})
 
     def __init__(self, args, index):
-        concat_changes = " ".join(
-            " ".join(x) for x in args.tests[index]["changes"].values()
-        )
-        self.name = args.tests[index].get("name") or (concat_changes or "baseline")
+        self.name = args.tests[index]["name"]
         self.results = []
         self.index = index
 
@@ -46,10 +44,13 @@ class Test:
             kwargs.update(env=environ.copy())
 
         elif system().startswith("Linux"):
-            specific_mangohud_conf = [
+            specific_mangohud_conf = (
                 f"log_duration={args.duration + start_delay}",
-                f"output_folder={args.raw_path.absolute()}",
-            ]
+                (
+                    "output_folder"
+                    f"={args.raw_path.absolute() / args.output_file / self.name}"
+                ),
+            )
             mangohud_conf = ",".join(
                 Test.required_mangohud_conf + specific_mangohud_conf
             )
@@ -63,15 +64,16 @@ class Test:
                 "Unsupported OS, this tool is only available for Windows and Linux"
             )
 
+        test_launch_options = args.tests[self.index]["changes"].get(
+            "launch-options", ()
+        )
         # Start game and wait for it to finish loading
         gm = Game(
             gameid=args.gameid,
-            game_path=args.game_path,
+            game_path=args.tests[self.index].get("game_path") or args.game_path,
             steam_path=args.steam_path,
-            l_opts=(
-                args.launch_options
-                + args.tests[self.index]["changes"].get("launch-options", [])
-            ),
+            l_opts=args.launch_options
+            + tuple(i for i in test_launch_options if i is not None),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -95,7 +97,7 @@ class Test:
             if len(tictoc) > 50 and abs(mean - diff < diff * 0.01):
                 break
 
-        for _ in range(args.passes):
+        for i in range(args.passes):
             # Apply cvars for each test
             for ch in args.tests[self.index]["changes"].get("cvars", []):
                 gm.rcon(ch)
@@ -123,14 +125,23 @@ class Test:
 
             gm.not_capturing.clear()
             if system().startswith("Win"):
-                specific_presentmon_conf = [
-                    f"-timed {args.duration + start_delay}",
-                    f"-output_file {args.raw_path.absolute()}",
-                ]
+                specific_presentmon_conf = (
+                    "-timed",
+                    str(args.duration + start_delay),
+                    "-process_id",
+                    str(gm.pid),
+                    "-output_file",
+                    str(
+                        args.raw_path.absolute()
+                        / args.output_file
+                        / self.name
+                        / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+                    ),
+                )
                 Popen(
-                    [args.presentmon_path]
-                    + Test.required_presentmon_conf
+                    (args.presentmon_path,)
                     + specific_presentmon_conf
+                    + Test.required_presentmon_conf
                 )
 
             if system().startswith("Linux"):
@@ -148,11 +159,12 @@ class Test:
             gm.rcon("disconnect")
             sleep(0.5)
 
-            p = args.raw_path.absolute()
+            p = args.raw_path.absolute() / args.output_file / self.name
             logs = list(p.glob("./*[0-9].csv"))
             logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 
             self.results.append(logs[0])
+            print(f"Finished pass {i}")
 
         gm.quit()
         sleep(10)
