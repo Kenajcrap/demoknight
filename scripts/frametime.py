@@ -20,7 +20,7 @@ def main(argv):
         usecols = (1, 11)
         skiprows = 3
         one_second = 1000000000
-    _, s = pl.subplots(figsize=(400,10))
+    _, s = pl.subplots(figsize=(200,10))
     for p in list(Path(argv[0]).glob("./*")):
         one_test = [[0,0]]
         for f in list(Path(p).glob("./*[0-9].csv")):
@@ -34,16 +34,19 @@ def main(argv):
             [[np.mean(one_test[one_test[:, 1] == value, 0]), value] for value in unique_values]
         )
         result = result[result[:, 1].argsort()]
-        s.plot(result[:, 1], result[:, 0], linewidth=0.3)
-    #pl.legend([plt[0] for plt in s], [p.name for p in list(Path(argv[0]).glob("./*"))])
+        s.plot(result[:, 1], result[:, 0], linewidth=0.3, label=p.name)
+    #pl.legend([plt[0] for plt in s], [p.name for p in list(P
+    # ath(argv[0]).glob("./*"))])
     pl.xlabel("Time (s)")
     pl.ylabel("Frametime (ms)")
     pl.xticks()
-    s.margins(0,0.1)
+    pl.legend()
+    s.set_ylim([0,10])
+    s.set_xlim([0,20])
     s.xaxis.set_major_locator(MultipleLocator(1))
     s.xaxis.set_minor_locator(AutoMinorLocator())
     pl.tight_layout()
-    pl.savefig(f'{Path(argv[0]).name}.png')
+    pl.savefig(f'{Path(argv[0]).name}.svg',dpi=140, format="svg")
     
     pl.show()
 
