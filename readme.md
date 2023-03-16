@@ -1,5 +1,5 @@
 # DemoKnight
-A tool to help automate repeated demo-based benchmarks of (some) source games leveraging [Mangohud](https://github.com/flightlessmango/MangoHud) or [Presentmon](https://github.com/GameTechDev/PresentMon) for frametime capture and [rcon](https://github.com/conqp/rcon) for in-game control. The tool is currently Linux only but Windows compatibility is planned soon.
+A tool to help automate repeated demo-based benchmarks of (some) source games leveraging [Mangohud](https://github.com/flightlessmango/MangoHud) or [Presentmon](https://github.com/GameTechDev/PresentMon) for frametime capture and [rcon](https://github.com/conqp/rcon) for in-game control.
 
 ### Warning
 This is the work of an amateur, not a developer. As such, I'm learning as I go and the quality of code here might not be as good as you see elsewhere. A complete rewrite is being worked on.
@@ -47,14 +47,13 @@ There is also a [template](https://github.com/Kenajcrap/demoknight/blob/main/con
 ## Planned Improvements
 In order of expedience
 
-- Complete rewrite: I was learning and researching as I went, which resulted in very messy code. This is very important to be able to accept contributions properly.
-- Windows compatibility: PresentMon may be used to allow compatibility on Windows
+- Integrate visualization options in the tool in a way that is easy for the user to expand on.
 - File manipulaton as test option: Currently you can apply launch options and cvars, it would be nice to be able to switch files for testing mods.
-- Popular statistical indicators like n-th percentile
 - Including metadata about the game being tested and the system in the summary output.
 
 ## Known Issues
 - If the game crashes to main menu instead of to the desktop (like when a demo file is corrupted or not fully compatible) the tool will silently capture invalid and continue
+- Currently the tool fails to proceed if the demo file specified is missing.
 ## Data visualisation
-Data visualisation tools are currently not included in demoknight, however, some simple scritps can be found in `datavis` that take in the json output from demoknight
+Data visualisation tools are currently not included in demoknight, however, some simple scritps can be found in `scripts` that take in the json output from demoknight or the folder containing the raw files. You will probably need to modify the scripts to use them properly.
 
