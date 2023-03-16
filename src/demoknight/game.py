@@ -297,8 +297,8 @@ class Game(psutil.Popen):
         # Lower timescale too much and the game becomes unresponsive, lower too little
         # and you can't start respond fast enough, and have to increase the buffer
         # between gototicks and prevent the start of the demo from being used
-        self.rcon(f"demo_debug 1; demo_gototick {tick-40} 0 0; demo_timescale 0.1")
-        self._wait_for_console(r"Demo message, tick " + str(tick - 40) + r",")
+        self.rcon(f"demo_debug 1; demo_gototick {tick-40} 0 0; demo_timescale 0.05")
+        self._wait_for_console(r"Demo message, tick " + str(tick - 35) + r",")
         self.rcon(f"demo_timescale 1; demo_gototick {tick} 0 0; demo_debug 0")
 
     @staticmethod
