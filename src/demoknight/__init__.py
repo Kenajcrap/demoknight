@@ -278,20 +278,21 @@ def main():
         args.tests.insert(0, {"name": "baseline", "changes": {}})
 
     # Check for duplicate tests and generate test names and changes if empty
-    names = [n["name"] for n in args.tests if n["name"] is not None]
+    names = [n["name"] for n in args.tests if n.get("name") is not None]
     if len(names) != len(set(names)):
         raise ValueError("Multiple tests with the same name")
     for t in args.tests:
         if t.get("changes"):
             if not t.get("name"):
-                concat_changes = (
-                    " ".join(
+                concat_changes = " ".join(
+                    [
                         " ".join([i for i in x if i is not None])
                         for x in t["changes"].values()
-                    )
-                    if not " "
-                    else "baseline"
+                    ]
                 )
+                if concat_changes == " ":
+                    concat_changes = "baseline"
+
                 timeout = 0
                 while timeout < 50:
                     if concat_changes in names:
@@ -411,7 +412,10 @@ def main():
         if args.format == "json":
             json.dump(summary, outfile)
         elif args.format == "csv":
-            writer = csv.DictWriter(outfile, fieldnames=["name", "Average Frametime", "Variance of Frametime"])
+            writer = csv.DictWriter(
+                outfile,
+                fieldnames=["name", "Average Frametime", "Variance of Frametime"],
+            )
             writer.writeheader()
             for test in summary:
                 test["name"] = [test["name"]] * len(test["Average Frametime"])
