@@ -13,7 +13,7 @@ start-tick: 200
 duration: 20.0
 tickrate: 66.6
 no-baseline: False
-versodity: "WARNING"
+verbosity: "WARNING"
 format: "csv"
 percentiles:
   - 0.1
