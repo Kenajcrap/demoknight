@@ -262,12 +262,12 @@ def main():
         "tests",
         action=SplitArgs,
         nargs="*",
-        type=lambda arg: arg.split(),
         help=(
             "Space separated inline test list instead of reading from yaml (one item"
             " per test). Options starting with '+' will be treated as cvars and"
             " executed in the main menu. Options starting with '-' will be treated as"
-            " launch options. Use ' -- ' to separate this from the named options."
+            " launch options. Use ' -- ' to separate this from the named options if"
+            " launch options are used"
         ),
     )
     # Overwrite config file with command line options
@@ -459,13 +459,15 @@ class SplitArgs(argparse.Action):
                 last_item.append(i)
                 continue
             if i[0] in ["-", "+"]:
-                tests.append({"changes": self._make_test(last_item)})
+                tst = self._make_test(last_item)
+                tests.append({"changes": tst, "name": " ".join(last_item).lstrip("+")})
                 last_item = [i]
             else:
                 last_item.append(i)
         else:
             if values:
-                tests.append({"changes": self._make_test(last_item)})
+                tst = self._make_test(last_item)
+                tests.append({"changes": tst, "name": " ".join(last_item).lstrip("+")})
         if values:
             setattr(namespace, self.dest, tests)
 
