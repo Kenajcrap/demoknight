@@ -16,7 +16,7 @@ This is the work of an amateur, not a developer. As such, I'm learning as I go a
 
 ## Motivation
 
-The source engine is old and can have some unintuitive quirks when it comes to performance compared to other ones. This tool was created to automate more granular testing of in-game parameters, mods and other system tweaks while treating the game as much as a "blackbox" as possible by not using in-game tools like `timedemo` to gather data.
+The source engine is old and can have some unintuitive quirks when it comes to performance compared to other ones. This tool was created to automate more granular testing of in-game parameters, mods and other system tweaks while treating the game as much as a "black box" as possible by not using in-game tools like `timedemo` to gather data.
 
 The automation also allows the user to leverage simple statistical analysis to increase the confidence of results at the cost of longer total test time repeated tests and more attention to the load being applied
 
@@ -139,14 +139,15 @@ There is also a [template](https://github.com/Kenajcrap/demoknight/blob/main/con
 In order of expedience
 
 - Integrate visualization options in the tool in a way that is easy for the user to expand on.
-- File manipulaton as test option: Currently you can apply launch options and cvars, it would be nice to be able to switch files for testing mods.
+- File manipulation as test option: Currently you can apply launch options and cvars, it would be nice to be able to switch files for testing mods.
 - Including metadata about the game being tested and the system in the summary output.
 
 ## Known Issues
 
 - If the game crashes to main menu instead of to the desktop (like when a demo file is corrupted or not fully compatible) the tool will silently capture invalid and continue
 - Currently the tool fails to proceed if the demo file specified is missing.
+- The tool does not parse `gameinfo.txt`, therefore, it cannot properly handle games that store the main executable or log files outside the main game folder.
 
-## Data visualisation
+## Data visualization
 
-Data visualisation tools are currently not included in demoknight, however, some simple scritps can be found in `scripts` that take in the json output from demoknight or the folder containing the raw files. You will probably need to modify the scripts to use them properly.
+Data visualization tools are currently not included in demoknight, however, some simple scripts can be found in `scripts` that take in the json output from demoknight or the folder containing the raw files. You will probably need to modify the scripts to use them properly.
