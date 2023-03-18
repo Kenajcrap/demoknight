@@ -10,7 +10,7 @@ authors = [
 description = "Automate source engine benchmark capture using rcon and mangohud"
 readme = "readme.md"
 requires-python = ">=3.7"
-version = "0.0.1"
+version = "0.0.2"
 keywords = ["rcon", "mangohud", "source-engine"]
 license = {text = "GPL-3"}
 classifiers = [
@@ -30,9 +30,8 @@ dependencies = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.1"
+version = "0.0.2"
 version_files = [
-    "src/__version__.py",
     "pyproject.toml:version"
 ]
 style = [
