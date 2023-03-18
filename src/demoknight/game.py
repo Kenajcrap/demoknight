@@ -266,12 +266,13 @@ class Game(psutil.Popen):
         if not self.watchdog_exceptions.empty():
             raise self.watchdog_exceptions.get()
         """
-        Start demo playback and wait for demo to load
+        Start demo playback and wait for demo to load, if the file is not found an
+        exception is raised
         """
         res = self.rcon(f"playdemo {demo}; demo_debug 1; demo_timescale 0.05")
         if res.startswith("CDemoFile::Open: couldn't open file "):
             raise FileNotFoundError(
-                f"Demo file not found by the game. Rcon response: {res}"
+                f"Demo file not found by the game.\nRcon response: {res}"
             )
         # Wait for the game to finish loading
         while not self.state.value == GameState.RUNNING.value:
