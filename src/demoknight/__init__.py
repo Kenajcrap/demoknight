@@ -31,8 +31,9 @@ def main():
     argv = sys.argv[1:]
     config_parser = argparse.ArgumentParser(
         description=(
-            "A tool that operates mangohud together with rcon to automatically generate"
-            " comparative benchmark results for different game setups"
+            "A tool that operates mangohud or presentmon together with rcon to"
+            " automatically generate comparative benchmark results for different source"
+            " game setups"
         ),
         prog="DemoKnight",
         prefix_chars="-",
@@ -44,9 +45,12 @@ def main():
         "-j",
         "--job-file",
         help=(
-            "Path to json file containing config parameters and a list of parameters to"
-            " be tested. Currently supports cvars and launch options to be applied"
+            "Path to yaml configuration file. Supports all launch options except"
+            ' "job-file" and "help", as well as a an advanced list of changes for each'
+            " test. Options in the file will be overwritten by options passed as"
+            " command line options"
         ),
+        metavar="PATH",
     )
     args, rest_argv = config_parser.parse_known_args()
     if args.job_file:
@@ -88,8 +92,8 @@ def main():
         default=0,
         type=int,
         help=(
-            "Overrides the gameid used to launch the game, game will be run through"
-            " Steam."
+            "The gameid used to launch the game through Steam. Takes preference over"
+            " 'game-path'. Required if 'game-path' is not used"
         ),
     )
 
@@ -101,22 +105,8 @@ def main():
             x for x in ("-g", "--gameid", "game-path", "gameid") if x in argv_and_parsed
         ],
         help=(
-            "Overrides the path to the game's binary file or starting script, game will"
-            " not be run through Steam."
-        ),
-    )
-
-    parser.add_argument(
-        "-l",
-        "--launch-options",
-        nargs=1,
-        default=(),
-        action=SplitSimple,
-        help=(
-            "Additional launch options to use for every test, added to the ones gotten"
-            " from steam if using --gameid. If using --gamepath, don't forget required"
-            " launch options like '-game'. For multiple arguments, use the form"
-            " '-l=\"-option1 -option2\"')"
+            "Path to game executable. If gameid is not specified, game will not launch"
+            " through Steam. Required if 'gameid' is not used"
         ),
     )
 
@@ -135,7 +125,39 @@ def main():
         "--steam-path",
         type=Path,
         default=find_steam_dir(),
-        help="Path to the steam folder, can be detected automatically",
+        help="Path to the steam folder. Automatically detected if not specified",
+    )
+
+    parser.add_argument(
+        "-D",
+        "--demo-path",
+        required=True,
+        help=(
+            "Path to the demo file, starting from the game's 'mod' directory (same as"
+            " the 'playdemo' console command in-game). Required"
+        ),
+    )
+
+    if system().startswith("Win"):
+        parser.add_argument(
+            "--presentmon-path",
+            type=Path,
+            required=not bool(which("presentmon")),
+            help="(Windows only) Path to PresentMon executable. Default: 'presentmon'",
+        )
+
+    parser.add_argument(
+        "-l",
+        "--launch-options",
+        nargs=1,
+        default=(),
+        action=SplitSimple,
+        help=(
+            "Additional launch options to use for every test, added to the ones gotten"
+            " from steam if using --gameid. If using --game-path, don't forget required"
+            " launch options like '-game'. For multiple arguments, use the form"
+            " '-l=\"-option1 -option2\"')"
+        ),
     )
 
     parser.add_argument(
@@ -143,7 +165,7 @@ def main():
         "--passes",
         default=5,
         type=int,
-        help="Overrides the number of passes. Default: 5",
+        help="Number of passes done for each test. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -154,18 +176,20 @@ def main():
         nargs="?",
         const=True,
         help=(
-            "Keep first pass. Discarting the first pass is needed if the demo section"
-            " used for benchmark is the very start, since performance there is not"
-            " representative."
+            "Keep first pass of each test. Discarting the first pass is needed if the"
+            " demo section used for benchmark is the very start, since performance"
+            " there is not representative. Default: %(default)s"
         ),
     )
 
     parser.add_argument(
         "-s",
         "--start-tick",
-        default=(66 * 2) + 20,
+        default=(66 * 2) + 55,
         type=int,
-        help="Start of the benchmark section of the demo in ticks.",
+        help=(
+            "Start of the benchmark section of the demo in ticks. Default: %(default)s"
+        ),
     )
 
     parser.add_argument(
@@ -173,24 +197,27 @@ def main():
         "--duration",
         default=20.0,
         type=float,
-        help="Benchmark duration in seconds. Default: 20.",
+        help="Benchmark duration in seconds. Default: %(default)s.",
     )
 
     parser.add_argument(
         "-t",
         "--tickrate",
         default=66.6,
+        nargs=1,
         type=float,
-        help="Server tickrate of the demo being played. Default: 66.6",
+        help="Server tickrate of the demo being played. Default: %(default)s",
     )
 
     parser.add_argument(
-        "-D",
-        "--demo-path",
-        required=True,
+        "-p",
+        "--percentiles",
+        nargs="+",
+        type=float,
+        default=getattr(args, "percentiles", [0.1, 1]),
         help=(
-            "Path to the demo file, starting from the game's 'mod' directory (same as"
-            " the 'playdemo' console command in-game)."
+            "Percentile high of frametime to be calculated in addition to average and"
+            " variance for each pass."
         ),
     )
 
@@ -201,7 +228,10 @@ def main():
         action=StoreTrueFalseAction,
         nargs="?",
         const=True,
-        help="Whether or not to capture a baseline test without applying changes",
+        help=(
+            "Whether or not to capture a baseline test without applying changes."
+            " Default: %(default)s"
+        ),
     )
 
     parser.add_argument(
@@ -209,7 +239,7 @@ def main():
         "--output-file",
         type=Path,
         default=Path(f"summary_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
-        help="Summary file. Default: current date and time",
+        help="path for the generated summary file. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -217,14 +247,7 @@ def main():
         "--verbosity",
         default="WARNING",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging verbosity. Default: WARNING",
-    )
-
-    parser.add_argument(
-        "--presentmon-path",
-        type=Path,
-        required=not bool(which("presentmon")),
-        help="Path to PresentMon executable. Default: 'presentmon'",
+        help="Logging verbosity. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -232,17 +255,19 @@ def main():
         "--format",
         default="csv",
         choices=["csv", "json"],
-        help="Format of the output file. Default: csv",
+        help="Format of the output file. Default: %(default)s",
     )
 
     parser.add_argument(
         "tests",
         action=SplitArgs,
         nargs="*",
+        type=lambda arg: arg.split(),
         help=(
-            "Space separated inline test list instead of reading from json (one item"
-            ' per test). Options starting with "+" will be treated as cvars. Options'
-            ' starting with "_" will be treated as launch options.'
+            "Space separated inline test list instead of reading from yaml (one item"
+            " per test). Options starting with '+' will be treated as cvars and"
+            " executed in the main menu. Options starting with '-' will be treated as"
+            " launch options. Use ' -- ' to separate this from the named options."
         ),
     )
     # Overwrite config file with command line options
@@ -433,7 +458,7 @@ class SplitArgs(argparse.Action):
             if not last_item:
                 last_item.append(i)
                 continue
-            if i[0] in ["_", "+"]:
+            if i[0] in ["-", "+"]:
                 tests.append({"changes": self._make_test(last_item)})
                 last_item = [i]
             else:
@@ -448,7 +473,7 @@ class SplitArgs(argparse.Action):
         prefix = test[0][0] or None
         if prefix == "+":
             return {"cvars": (" ".join(test)[1:],)}
-        elif prefix == "_":
+        elif prefix == "-":
             return {"launch_options": (f"-{' '.join(test)[1:]}",)}
 
 
