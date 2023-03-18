@@ -1,4 +1,6 @@
 # Template with all config options and default values to be used as reference.
+# Options in this file get overwritten by command line options.
+# Required options can be passed through command line options instead
 # Options with empty strings or left blank will be ignored.
 gameid: 0              # Required if game-path is not used
 game-path:             # Default: Automatic, or required if gameid is not used
@@ -19,8 +21,8 @@ percentiles:
   - 0.1
   - 1
 tests:
-  - name:
-    game-path:
+  - name:              # Default: Concatenation of all changes, or ´baseline´ if there are no changes
+    game-path:         # Will overwrite the game-path specified in the global options
     changes:
       cvars:
         -
