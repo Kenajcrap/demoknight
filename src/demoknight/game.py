@@ -12,6 +12,10 @@ from random import SystemRandom, randint
 from time import sleep, time
 
 import psutil
+
+# TODO: Undo monkey patch when pull request is merged: https://github.com/ValvePython/vdf/pull/53
+from . import vdf_patch
+import vdf
 from rcon.exceptions import EmptyResponse
 from rcon.source import Client
 from watchfiles import watch

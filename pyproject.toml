@@ -19,7 +19,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "psutil",
-    "vdf",
+    "vdf == 3.4",
     "rcon",
     "steamid",
     "watchfiles",
