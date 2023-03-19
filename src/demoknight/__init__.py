@@ -578,7 +578,11 @@ def find_game_dir(steam_dir, gameid):
     )
 
     for i in game_dir.iterdir():
-        if i.is_file() and os.access(i, os.X_OK):
+        if (
+            i.is_file()
+            and os.access(i, os.X_OK)
+            and i.suffix not in (".txt", ".sh", ".bat")
+        ):
             return i
 
 
