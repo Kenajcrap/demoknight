@@ -6,6 +6,7 @@ import re
 import socket
 import string
 import threading
+from pathlib import Path
 from enum import Enum
 from platform import system
 from random import SystemRandom, randint
@@ -134,8 +135,30 @@ class Game(psutil.Popen):
         if self._find_game_proc(game_path):
             raise Exception("Game is already running, close it and try again")
 
+        gameinfo_path = tuple(game_path.parent.glob("./*/gameinfo.txt"))[0]
+
+        # Find log locations
+        gameinfo = vdf.load(open(gameinfo_path), mapper=vdf.VDFDict)
+        write_paths = []
+        for k, v in gameinfo["GameInfo"]["FileSystem"]["SearchPaths"].iteritems():
+            if v.startswith("|all_source_engine_paths|"):
+                v = game_path.parent.absolute() / Path(
+                    v.replace("|all_source_engine_paths|", "")
+                )
+            elif v.startswith("|gameinfo_path|"):
+                v = game_path.parent.absolute() / Path(v.replace("|gameinfo_path|", ""))
+            else:
+                v = game_path.parent.absolute() / Path(v)
+            if any(
+                i in k.split("+")
+                for i in ("default_write_path", "game_write", "mod_write")
+            ):
+                if v not in write_paths:
+                    write_paths.append(Path(v))
+
+        logs = [file for path in write_paths for file in path.glob("./demoknight.log")]
+
         # Clear log file before each run given we are spamming it so much
-        logs = tuple(game_path.parent.glob("./*/demoknight.log"))
         if len(logs) > 1:
             raise FileNotFoundError("More than one demoknight.log file was found")
         elif logs:
@@ -183,7 +206,11 @@ class Game(psutil.Popen):
             # isn't a log file yet
             # TODO: Find a better solution
             try:
-                self.log_path = tuple(game_path.parent.glob("./*/demoknight.log"))[0]
+                self.log_path = [
+                    file
+                    for path in write_paths
+                    for file in path.glob("./demoknight.log")
+                ][0]
             except IndexError:
                 pass
 
