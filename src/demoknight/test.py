@@ -70,7 +70,7 @@ class Test:
         # Start game and wait for it to finish loading
         gm = Game(
             gameid=args.gameid,
-            game_path=args.tests[self.index].get("game_path") or args.game_path,
+            game_path=args.tests[self.index].get("game-path") or args.game_path,
             steam_path=args.steam_path,
             l_opts=args.launch_options
             + tuple(i for i in test_launch_options if i is not None),
