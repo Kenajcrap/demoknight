@@ -300,7 +300,8 @@ class Game(psutil.Popen):
         Start demo playback and wait for demo to load, if the file is not found an
         exception is raised
         """
-        res = self.rcon(f"playdemo {demo}; demo_debug 1; demo_timescale 0.05")
+        self.rcon("demo_debug 1")
+        res = self.rcon(f"playdemo {demo}")
         if res.startswith("CDemoFile::Open: couldn't open file "):
             raise FileNotFoundError(
                 f"Demo file not found by the game.\nRcon response: {res}"
@@ -310,8 +311,10 @@ class Game(psutil.Popen):
             if not self.watchdog_exceptions.empty():
                 raise self.watchdog_exceptions.get()
             sleep(1)
+        self.rcon("demo_timescale 0.05")
         self._wait_for_console(r"Demo message")
-        self.rcon("demo_timescale 1; demo_debug 0")
+        self.rcon("demo_timescale 1")
+        self.rcon("demo_debug 0")
 
     def quit(self):
         if not self.watchdog_exceptions.empty():
@@ -333,9 +336,13 @@ class Game(psutil.Popen):
         # Lower timescale too much and the game becomes unresponsive, lower too little
         # and you can't start respond fast enough, and have to increase the buffer
         # between gototicks and prevent the start of the demo from being used
-        self.rcon(f"demo_debug 1; demo_gototick {tick-40} 0 0; demo_timescale 0.05")
-        self._wait_for_console(r"Demo message, tick " + str(tick - 35) + r",")
-        self.rcon(f"demo_timescale 1; demo_gototick {tick} 0 0; demo_debug 0")
+        self.rcon("demo_debug 1")
+        self.rcon("demo_timescale 0.05")
+        self.rcon(f"demo_gototick {tick - 30} 0 0")
+        self._wait_for_console(r"Demo message, tick " + str(tick - 30) + r",")
+        self.rcon(f"demo_gototick {tick}")
+        self.rcon("demo_timescale 1")
+        self.rcon("demo_debug 0")
 
     @staticmethod
     def _rand_pass():
