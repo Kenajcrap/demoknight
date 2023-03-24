@@ -52,7 +52,21 @@ def main():
         ),
         metavar="PATH",
     )
+
+    config_parser.add_argument(
+        "-v",
+        "--verbosity",
+        default="WARNING",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging verbosity. Default: %(default)s",
+    )
+
     args, rest_argv = config_parser.parse_known_args()
+
+    numeric_loglevel = getattr(logging, args.verbosity.upper(), None)
+
+    logging.basicConfig(level=numeric_loglevel)
+
     if args.job_file:
         file_dict = try_parsing_file(args.job_file)
 
