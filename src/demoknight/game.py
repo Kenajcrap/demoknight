@@ -325,7 +325,7 @@ class Game(psutil.Popen):
         self.watchdog.join()
         os.remove(self.log_path)
 
-    def gototick(self, tick: int):
+    def gototick(self, tick: int, tick_interval):
         if not self.watchdog_exceptions.empty():
             raise self.watchdog_exceptions.get()
         """

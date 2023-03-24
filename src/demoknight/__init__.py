@@ -11,6 +11,7 @@ from platform import system
 from tempfile import gettempdir
 
 import numpy as np
+from . import vdf_patch
 import vdf
 import yaml
 from psutil import NoSuchProcess
@@ -29,19 +30,13 @@ if system().startswith("Win"):
 
 def main():
     argv = sys.argv[1:]
-    config_parser = argparse.ArgumentParser(
-        description=(
-            "A tool that operates mangohud or presentmon together with rcon to"
-            " automatically generate comparative benchmark results for different source"
-            " game setups"
-        ),
-        prog="DemoKnight",
-        prefix_chars="-",
-        add_help=False,
+
+    file_parser = argparse.ArgumentParser(
+        allow_abbrev=False, prefix_chars="-", add_help=False
     )
 
     # JSON config support
-    config_parser.add_argument(
+    file_parser.add_argument(
         "-j",
         "--job-file",
         help=(
@@ -53,7 +48,7 @@ def main():
         metavar="PATH",
     )
 
-    config_parser.add_argument(
+    file_parser.add_argument(
         "-v",
         "--verbosity",
         default="WARNING",
@@ -61,7 +56,11 @@ def main():
         help="Logging verbosity. Default: %(default)s",
     )
 
-    args, rest_argv = config_parser.parse_known_args()
+    args, rest_argv = file_parser.parse_known_args()
+
+    game_parser = argparse.ArgumentParser(
+        allow_abbrev=False, prefix_chars="-", add_help=False, parents=[file_parser]
+    )
 
     numeric_loglevel = getattr(logging, args.verbosity.upper(), None)
 
@@ -91,16 +90,21 @@ def main():
     else:
         argv_and_parsed = argv
 
-    parser = argparse.ArgumentParser(
-        parents=[config_parser], allow_abbrev=False, prefix_chars="-"
-    )
-
-    parser.add_argument(
+    game_parser.add_argument(
         "-g",
         "--gameid",
         required=not [
             x
-            for x in ("-G", "--game-path", "gameid", "game-path")
+            for x in (
+                "-G",
+                "--game-path",
+                "-g",
+                "--gameid",
+                "gameid",
+                "game-path",
+                "-h",
+                "--help",
+            )
             if x in argv_and_parsed
         ],
         default=0,
@@ -111,17 +115,128 @@ def main():
         ),
     )
 
-    parser.add_argument(
+    game_parser.add_argument(
         "-G",
         "--game-path",
         type=Path,
         required=not [
-            x for x in ("-g", "--gameid", "game-path", "gameid") if x in argv_and_parsed
+            x
+            for x in (
+                "-G",
+                "--game-path",
+                "-g",
+                "--gameid",
+                "game-path",
+                "gameid",
+                "-h",
+                "--help",
+            )
+            if x in argv_and_parsed
         ],
         help=(
             "Path to game executable. If gameid is not specified, game will not launch"
             " through Steam. Required if 'gameid' is not used"
         ),
+    )
+
+    game_parser.add_argument(
+        "-S",
+        "--steam-path",
+        type=Path,
+        default=find_steam_dir(),
+        help="Path to the steam folder. Automatically detected if not specified",
+    )
+
+    args, rest_argv = game_parser.parse_known_args(args=rest_argv, namespace=args)
+
+    interval_per_gameid = {440: 0.015, 770: 0.015625, 550: 0.03333333, 500: 0.03333333}
+
+    # Find game if gameid is specified
+    tick_interval_required = False
+    default_tick_interval = 0.015
+    if args.gameid:
+        if args.game_path:
+            logging.warning(
+                "--gameid specified. --game-path will be ignored and the game directory"
+                " will be derived from libraryfolders.vdf"
+            )
+        if args.gameid in interval_per_gameid:
+            default_tick_interval = interval_per_gameid[args.gameid]
+            logging.info(
+                f"Default --tick-interval for {args.gameid} found:"
+                f" {interval_per_gameid[args.gameid]}"
+            )
+        else:
+            tick_interval_required = True
+            logging.warning(
+                f"Default tick-interval not found for gameid {args.gameid}, --tickrate"
+                " or --tick-interval will be required"
+            )
+        args.game_path = find_game_dir(args.steam_path, args.gameid)
+    else:
+        # Or, at least find gameid from gameinfo so we know the default tickrate for some of
+        # the games
+        if any("game-path" in d for d in args.tests):
+            cur_gameid = 0
+            for v in (d for d in args.tests if "game-path" in d):
+                gameid = find_id_from_game_path(v.get("game-path"))
+                if cur_gameid and cur_gameid != gameid:
+                    tick_interval_required = True
+                    logging.warning(
+                        "Conflicting gameids found in game-paths, --tickrate or"
+                        " --tick-interval will be required"
+                    )
+                    break
+                else:
+                    cur_gameid = gameid
+            else:
+                if cur_gameid in interval_per_gameid:
+                    default_tick_interval = interval_per_gameid[cur_gameid]
+                else:
+                    tick_interval_required = True
+                    logging.warning(
+                        "Couldn't find default --tick_interval for gameid"
+                        f" {cur_gameid}, --tickrate or --tick_interval will be required"
+                    )
+        elif not tick_interval_required and args.game_path:
+            gameid = find_id_from_game_path(args.game_path)
+            if gameid != cur_gameid:
+                tick_interval_required = True
+            else:
+                if args.gameid in interval_per_gameid:
+                    default_tick_interval = interval_per_gameid[gameid]
+                else:
+                    tick_interval_required = True
+                    logging.warning(
+                        f"Couldn't find default --tick_interval for gameid {gameid},"
+                        " --tickrate or --tick_interval will be required"
+                    )
+
+    parser = argparse.ArgumentParser(
+        allow_abbrev=False, prefix_chars="-", parents=[game_parser]
+    )
+
+    tkgroup = parser.add_mutually_exclusive_group(required=tick_interval_required)
+
+    tkgroup.add_argument(
+        "-T",
+        "--tick-interval",
+        nargs=1,
+        type=float,
+        default=default_tick_interval,
+        help=(
+            "Time interval between ticks of the demo being played, in seconds. Default:"
+            " %(default)s"
+        ),
+    )
+
+    tkgroup.add_argument(
+        "-t",
+        "--tickrate",
+        nargs=1,
+        type=lambda x: float((1 / x if 66 <= x <= 67 else 0.015)),
+        dest="tick_interval",
+        help="Server tickrate of the demo being played. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -132,14 +247,6 @@ def main():
             "Path to the mangohud/presentmon log files. Defaults to the temporary"
             " folder of your OS."
         ),
-    )
-
-    parser.add_argument(
-        "-S",
-        "--steam-path",
-        type=Path,
-        default=find_steam_dir(),
-        help="Path to the steam folder. Automatically detected if not specified",
     )
 
     parser.add_argument(
@@ -206,21 +313,32 @@ def main():
         ),
     )
 
+    # Mangohud doesn't start capturing at the start as soon as we tell it to.
+    # Therefore we gotta start a second earlier to be safe
+    # Fast fowarding causes particles and props to behave unlike they do
+    # normally and cause lag once we resume normal playback. We gotta let those
+    # settle down before we can get good data.
+
+    # TODO: Check if tick is at the very start of a demo and refrain from
+    # fast-fowarding instead.
+
+    parser.add_argument(
+        "--start-buffer",
+        default=2,
+        type=float,
+        help=(
+            "After fast-fowarding a demo, particles and physics objects can take longer"
+            " than they should to de-spawn. This safety buffer ensures that they do"
+            " before starting the benchmark. In seconds. Default: %(default)s"
+        ),
+    )
+
     parser.add_argument(
         "-d",
         "--duration",
         default=20.0,
         type=float,
         help="Benchmark duration in seconds. Default: %(default)s.",
-    )
-
-    parser.add_argument(
-        "-t",
-        "--tickrate",
-        default=66.6,
-        nargs=1,
-        type=float,
-        help="Server tickrate of the demo being played. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -236,6 +354,22 @@ def main():
     )
 
     parser.add_argument(
+        "-o",
+        "--output-file",
+        type=Path,
+        default=Path(f"summary_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
+        help="path for the generated summary file. Default: %(default)s",
+    )
+
+    parser.add_argument(
+        "-f",
+        "--format",
+        default="csv",
+        choices=["csv", "json"],
+        help="Format of the output file. Default: %(default)s",
+    )
+
+    parser.add_argument(
         "-b",
         "--no-baseline",
         default=False,
@@ -246,30 +380,6 @@ def main():
             "Whether or not to capture a baseline test without applying changes."
             " Default: %(default)s"
         ),
-    )
-
-    parser.add_argument(
-        "-o",
-        "--output-file",
-        type=Path,
-        default=Path(f"summary_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
-        help="path for the generated summary file. Default: %(default)s",
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbosity",
-        default="WARNING",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging verbosity. Default: %(default)s",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--format",
-        default="csv",
-        choices=["csv", "json"],
-        help="Format of the output file. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -287,28 +397,13 @@ def main():
     # Overwrite config file with command line options
     parser.parse_args(args=rest_argv, namespace=args)
 
-    numeric_loglevel = getattr(logging, args.verbosity.upper(), None)
-
-    # Mangohud doesn't start capturing at the start as soon as we tell it to.
-    # Therefore we gotta start a second earlier to be safe
-    # Fast fowarding causes particles and props to behave unlike they do
-    # normally and cause lag once we resume normal playback. We gotta let those
-    # settle down before we can get good data.
-
-    # TODO: Check if tick is at the very start of a demo and refrain from
-    # fast-fowarding instead.
-    start_delay = 2
-
+    # Presentmon group required
     if system().startswith("Win"):
         check_local_group()
 
+    # Logging verbosity
     if not isinstance(numeric_loglevel, int):
         raise ValueError("Invalid log level: %s" % args.verbosity)
-    logging.basicConfig(level=numeric_loglevel)
-
-    # Find game if gameid is specified
-    if args.gameid:
-        args.game_path = find_game_dir(args.steam_path, args.gameid)
 
     # Include a job at the top of the list for baseline if required
     if not args.no_baseline:
@@ -320,6 +415,7 @@ def main():
     names = [n["name"] for n in args.tests if n.get("name") is not None]
     if len(names) != len(set(names)):
         raise ValueError("Multiple tests with the same name")
+
     for t in args.tests:
         if t.get("changes"):
             if not t.get("name"):
@@ -361,9 +457,9 @@ def main():
         (
             (
                 +3  # load demo
-                + (start_delay)  # delay
+                + (args.start_buffer)  # delay
                 + args.duration  # demo playback
-                + (args.start_tick / (args.tickrate or 66) / 20)  # fastfoward
+                + (args.start_tick * (args.tick_interval or 0.015) / 20)  # fastfoward
             )
             * (args.passes)
             * 1.1
@@ -389,7 +485,7 @@ def main():
         while not success:
             print(f"Starting test {test.name}")
             try:
-                test.capture(args, start_delay)
+                test.capture(args)
             except NoSuchProcess:
                 logging.error("The game seems to have crashed, retrying entire test")
                 # TODO: If we later allow the tests to run continuously, we need to
@@ -427,7 +523,7 @@ def main():
             arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
             # We actually start capturing 2 seconds before we need to, so get
             # rid of those rows
-            arr[:, 1] -= start_delay * elapsed_second
+            arr[:, 1] -= args.start_buffer * elapsed_second
             arr = arr[arr[..., 1] >= 0]
             entry["Average Frametime"].append(
                 np.average(arr[:, 0] / frametime_ms, axis=0)
@@ -453,7 +549,8 @@ def main():
         elif args.format == "csv":
             writer = csv.DictWriter(
                 outfile,
-                fieldnames=["name", "Average Frametime", "Variance of Frametime"],
+                fieldnames=["name", "Average Frametime", "Variance of Frametime"]
+                + [f"{n}% High of Frametime" for n in args.percentiles],
             )
             writer.writeheader()
             for test in summary:
@@ -598,6 +695,26 @@ def find_game_dir(steam_dir, gameid):
             and i.suffix not in (".txt", ".sh", ".bat")
         ):
             return i
+
+
+def find_id_from_game_path(game_path):
+    try:
+        gameinfo_path = tuple(game_path.parent.glob("./*/gameinfo.txt"))[0]
+    except IndexError as e:
+        raise FileNotFoundError(
+            f'gameinfo.txt not found in the game_path "{game_path.parent}".\n{e}'
+        )
+    try:
+        gameid = vdf.load(open(gameinfo_path), mapper=vdf.VDFDict)["GameInfo"][
+            "FileSystem"
+        ]["SteamAppId"]
+    except IndexError as e:
+        logging.error(
+            f"SteamAppId entry not found in {gameinfo_path}, this game might not be"
+            f" compatible with the tool\n{e}"
+        )
+        gameid = 0
+    return gameid
 
 
 # Currently unused function, maybe useful later

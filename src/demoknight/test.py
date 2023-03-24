@@ -32,7 +32,7 @@ class Test:
         self.results = []
         self.index = index
 
-    def capture(self, args, start_delay):
+    def capture(self, args):
         # create independent process just to make sure
         # https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908
         kwargs = {}
@@ -45,7 +45,7 @@ class Test:
 
         elif system().startswith("Linux"):
             specific_mangohud_conf = (
-                f"log_duration={args.duration + start_delay}",
+                f"log_duration={args.duration + args.start_buffer}",
                 (
                     "output_folder"
                     f"={args.raw_path.absolute() / args.output_file / self.name}"
@@ -105,29 +105,23 @@ class Test:
             # Play demo and wait for game to load
             gm.playdemo(args.demo_path)
 
-            # Calculate tickrate if not specified
-            if not args.tickrate:
-                conpat = re.compile(r'(?<=rate" = ")[\d\.]+(?=")')
-                updmax = float(conpat.search(gm.rcon("sv_maxupdaterate")))
-                updmin = float(conpat.search(gm.rcon("sv_minupdaterate")))
-                self.tickrate = (updmax + updmin) / 2
-            else:
-                self.tickrate = args.tickrate
-
-            if args.start_tick - start_delay * self.tickrate < 15:
+            if args.start_tick - args.start_buffer * (1 / args.tick_interval) < 15:
                 raise Exception(
                     "Due to constraints with frametime capture and demos, minimum"
-                    f" value for -s/--start-tick is {15 + start_delay}"
+                    f" value for -s/--start-tick is {15 + args.start_buffer}"
                 )
 
             # Go to tick and wait for fast-foward to finish
-            gm.gototick(int(args.start_tick - start_delay * self.tickrate))
+            gm.gototick(
+                int(args.start_tick - args.start_buffer * (1 / args.tick_interval)),
+                args.tick_interval,
+            )
 
             gm.not_capturing.clear()
             if system().startswith("Win"):
                 specific_presentmon_conf = (
                     "-timed",
-                    str(args.duration + start_delay),
+                    str(args.duration + args.start_buffer),
                     "-process_id",
                     str(gm.pid),
                     "-output_file",
@@ -150,7 +144,7 @@ class Test:
                 )
 
             # Extend duration due to mangohud bug
-            sleep(args.duration + start_delay)
+            sleep(args.duration + args.start_buffer)
             gm.not_capturing.set()
             sleep(0.5)
 
