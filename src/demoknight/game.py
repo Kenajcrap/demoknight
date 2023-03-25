@@ -306,15 +306,10 @@ class Game(psutil.Popen):
             raise FileNotFoundError(
                 f"Demo file not found by the game.\nRcon response: {res}"
             )
-        # Wait for the game to finish loading
-        while not self.state.value == GameState.RUNNING.value:
-            if not self.watchdog_exceptions.empty():
-                raise self.watchdog_exceptions.get()
-            sleep(1)
-        self.rcon("demo_timescale 0.05")
+        self.rcon("demo_timescale 0.01")
+        # Wait for the demo to finish loading
         self._wait_for_console(r"Demo message")
-        self.rcon("demo_timescale 1")
-        self.rcon("demo_debug 0")
+        self.rcon("demo_timescale 1; demo_debug 0")
 
     def quit(self):
         if not self.watchdog_exceptions.empty():
@@ -337,12 +332,23 @@ class Game(psutil.Popen):
         # and you can't start respond fast enough, and have to increase the buffer
         # between gototicks and prevent the start of the demo from being used
         self.rcon("demo_debug 1")
+        end = 0
+        scale = 24
+        while scale > 0.05 and tick - end > 10:
+            end = round(end + ((tick - end) / 2))
+            scale = (tick_interval * (tick - end)) / 0.5
+            if scale > 12:
+                self.rcon(f"demo_gototick {end}")
+                self._wait_for_console(str(end) + r" dem_usercmd")
+                continue
+            else:
+                logging.warning(f"timescale: {scale} end: {end}")
+                self.rcon(f"demo_timescale {scale}")
+                self._wait_for_console(str(end) + r" dem_usercmd")
+        logging.warning(f"waiting for: {tick}")
         self.rcon("demo_timescale 0.05")
-        self.rcon(f"demo_gototick {tick - 30} 0 0")
-        self._wait_for_console(r"Demo message, tick " + str(tick - 30) + r",")
-        self.rcon(f"demo_gototick {tick}")
-        self.rcon("demo_timescale 1")
-        self.rcon("demo_debug 0")
+        self._wait_for_console(str(tick) + r" dem_usercmd")
+        self.rcon("demo_debug 0; demo_timescale 1")
 
     @staticmethod
     def _rand_pass():
@@ -364,16 +370,15 @@ class Game(psutil.Popen):
     def _wait_for_console(self, regex_pattern):
         # print(steamdir)
         logpat = re.compile(regex_pattern)
-        for _ in watch(self.log_path, force_polling=system().startswith("Win")):
-            if self.last_position > os.path.getsize(self.log_path):
-                self.last_position = 0
-            with open(self.log_path) as f:
+        with open(self.log_path) as f:
+            for _ in watch(self.log_path, force_polling=system().startswith("Win")):
+                if self.last_position > os.path.getsize(self.log_path):
+                    self.last_position = 0
                 f.seek(self.last_position)
                 loglines = f.readlines()
                 self.last_position = f.tell()
-                groups = (logpat.search(line.strip()) for line in loglines)
-                for g in groups:
-                    if g:
+                for line in loglines:
+                    if logpat.search(line.strip()):
                         return self.last_position
 
     @staticmethod
