@@ -176,31 +176,36 @@ def main():
     else:
         # Or, at least find gameid from gameinfo so we know the default tickrate for some of
         # the games
+        test_gameid = 0
         if any("game-path" in d for d in getattr(args, "tests", [])):
-            cur_gameid = 0
             for v in (d for d in args.tests if "game-path" in d):
                 gameid = find_id_from_game_path(v.get("game-path"))
-                if cur_gameid and cur_gameid != gameid:
+                if test_gameid and test_gameid != gameid:
                     tick_interval_required = True
                     logging.warning(
-                        "Conflicting gameids found in game-paths, --tickrate or"
+                        "Conflicting gameids found in test game-paths, --tickrate or"
                         " --tick-interval will be required"
                     )
                     break
                 else:
-                    cur_gameid = gameid
+                    test_gameid = gameid
             else:
-                if cur_gameid in interval_per_gameid:
-                    default_tick_interval = interval_per_gameid[cur_gameid]
+                if test_gameid in interval_per_gameid.keys():
+                    default_tick_interval = interval_per_gameid[test_gameid]
                 else:
                     tick_interval_required = True
                     logging.warning(
                         "Couldn't find default --tick_interval for gameid"
-                        f" {cur_gameid}, --tickrate or --tick_interval will be required"
+                        f" {test_gameid}, --tickrate or --tick_interval will be"
+                        " required"
                     )
         elif not tick_interval_required and args.game_path:
             gameid = find_id_from_game_path(args.game_path)
-            if gameid != cur_gameid:
+            if test_gameid and gameid != test_gameid:
+                logging.warning(
+                    "Conflicting gameids found in between global game-path and test"
+                    " game-path, --tickrate or --tick-interval will be required"
+                )
                 tick_interval_required = True
             else:
                 if args.gameid in interval_per_gameid:
