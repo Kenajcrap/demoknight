@@ -336,18 +336,18 @@ class Game(psutil.Popen):
         scale = 24
         while scale > 0.05 and tick - end > 10:
             end = round(end + ((tick - end) / 2))
-            scale = (tick_interval * (tick - end)) / 0.5
+            scale = (tick_interval * (tick - end)) / 2
             if scale > 12:
                 self.rcon(f"demo_gototick {end}")
-                self._wait_for_console(str(end) + r" dem_usercmd")
+                self._wait_for_console(str(end)[:-1] + r"[0-9] dem_usercmd")
                 continue
             else:
                 logging.warning(f"timescale: {scale} end: {end}")
                 self.rcon(f"demo_timescale {scale}")
-                self._wait_for_console(str(end) + r" dem_usercmd")
+                self._wait_for_console(str(end)[:-1] + r"[0-9] dem_usercmd")
         logging.warning(f"waiting for: {tick}")
         self.rcon("demo_timescale 0.05")
-        self._wait_for_console(str(tick) + r" dem_usercmd")
+        self._wait_for_console(str(tick)[:-1] + r"[0-9] dem_usercmd")
         self.rcon("demo_debug 0; demo_timescale 1")
 
     @staticmethod
@@ -371,12 +371,16 @@ class Game(psutil.Popen):
         # print(steamdir)
         logpat = re.compile(regex_pattern)
         with open(self.log_path) as f:
-            for _ in watch(self.log_path, force_polling=system().startswith("Win")):
+            for _ in watch(
+                self.log_path,
+                force_polling=system().startswith("Win"),
+                poll_delay_ms=50,
+            ):
                 if self.last_position > os.path.getsize(self.log_path):
                     self.last_position = 0
                 f.seek(self.last_position)
                 loglines = f.readlines()
-                self.last_position = f.tell()
+                self.last_position = f.tell() - 200
                 for line in loglines:
                     if logpat.search(line.strip()):
                         return self.last_position
