@@ -699,7 +699,7 @@ def find_game_dir(steam_dir, gameid):
 
 def find_id_from_game_path(game_path):
     try:
-        gameinfo_path = tuple(game_path.parent.glob("./*/gameinfo.txt"))[0]
+        gameinfo_path = tuple(Path(game_path).parent.glob("./*/gameinfo.txt"))[0]
     except IndexError as e:
         raise FileNotFoundError(
             f'gameinfo.txt not found in the game_path "{game_path.parent}".\n{e}'
@@ -714,7 +714,7 @@ def find_id_from_game_path(game_path):
             f" compatible with the tool\n{e}"
         )
         gameid = 0
-    return gameid
+    return int(gameid)
 
 
 # Currently unused function, maybe useful later
