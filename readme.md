@@ -46,13 +46,13 @@ pip install .
 A list of options is available doing `demoknight -h`:
 
 ```text
-usage: demoknight [-h] [-j PATH] -g GAMEID -G GAME_PATH [--raw-path RAW_PATH]
-                  [-S STEAM_PATH] -D DEMO_PATH --presentmon-path PRESENTMON_PATH
+usage: demoknight [-h] [-j PATH] [-v {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-g GAMEID]
+                  [-G GAME_PATH] [-S STEAM_PATH] [-T TICK_INTERVAL | -t TICK_INTERVAL]
+                  [--raw-path RAW_PATH] -D DEMO_PATH --presentmon-path PRESENTMON_PATH
                   [-l LAUNCH_OPTIONS] [-n PASSES] [-k [KEEP_FIRST_PASS]]
-                  [-s START_TICK] [-d DURATION] [-t TICKRATE]
-                  [-p PERCENTILES [PERCENTILES ...]] [-b [NO_BASELINE]]
-                  [-o OUTPUT_FILE] [-v {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
-                  [-f {csv,json}]
+                  [-s START_TICK] [--start-buffer START_BUFFER] [-d DURATION]
+                  [-p PERCENTILES [PERCENTILES ...]] [-o OUTPUT_FILE] [-f {csv,json}]
+                  [-b [NO_BASELINE]]
                   [tests ...]
 
 positional arguments:
@@ -69,6 +69,8 @@ options:
                         except "job-file" and "help", as well as a an advanced list of
                         changes for each test. Options in the file will be overwritten
                         by options passed as command line options
+  -v {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --verbosity {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Logging verbosity. Default: WARNING
   -g GAMEID, --gameid GAMEID
                         The gameid used to launch the game through Steam. Takes
                         preference over 'game-path'. Required if 'game-path' is not
@@ -76,11 +78,16 @@ options:
   -G GAME_PATH, --game-path GAME_PATH
                         Path to game executable. If gameid is not specified, game will
                         not launch through Steam. Required if 'gameid' is not used
-  --raw-path RAW_PATH   Path to the mangohud/presentmon log files. Defaults to the
-                        temporary folder of your OS.
   -S STEAM_PATH, --steam-path STEAM_PATH
                         Path to the steam folder. Automatically detected if not
                         specified
+  -T TICK_INTERVAL, --tick-interval TICK_INTERVAL
+                        Time interval between ticks of the demo being played, in
+                        seconds. Default: 0.015
+  -t TICK_INTERVAL, --tickrate TICK_INTERVAL
+                        Server tickrate of the demo being played. Default: None
+  --raw-path RAW_PATH   Path to the mangohud/presentmon log files. Defaults to the
+                        temporary folder of your OS.
   -D DEMO_PATH, --demo-path DEMO_PATH
                         Path to the demo file, starting from the game's 'mod'
                         directory (same as the 'playdemo' console command in-game).
@@ -103,23 +110,24 @@ options:
   -s START_TICK, --start-tick START_TICK
                         Start of the benchmark section of the demo in ticks. Default:
                         187
+  --start-buffer START_BUFFER
+                        After fast-fowarding a demo, particles and physics objects can
+                        take longer than they should to de-spawn. This safety buffer
+                        ensures that they do before starting the benchmark. In
+                        seconds. Default: 2
   -d DURATION, --duration DURATION
                         Benchmark duration in seconds. Default: 20.0.
-  -t TICKRATE, --tickrate TICKRATE
-                        Server tickrate of the demo being played. Default: 66.6
   -p PERCENTILES [PERCENTILES ...], --percentiles PERCENTILES [PERCENTILES ...]
                         Percentile high of frametime to be calculated in addition to
                         average and variance for each pass.
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        path for the generated summary file. Default:
+                        summary_2023-03-25_01-12-22
+  -f {csv,json}, --format {csv,json}
+                        Format of the output file. Default: csv
   -b [NO_BASELINE], --no-baseline [NO_BASELINE]
                         Whether or not to capture a baseline test without applying
                         changes. Default: False
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        path for the generated summary file. Default:
-                        summary_2023-03-18_19-51-46
-  -v {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --verbosity {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Logging verbosity. Default: WARNING
-  -f {csv,json}, --format {csv,json}
-                        Format of the output file. Default: csv
 ```
 
 Examples:
