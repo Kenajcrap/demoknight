@@ -176,7 +176,7 @@ def main():
     else:
         # Or, at least find gameid from gameinfo so we know the default tickrate for some of
         # the games
-        if any("game-path" in d for d in args.tests):
+        if any("game-path" in d for d in getattr(args, "tests", [])):
             cur_gameid = 0
             for v in (d for d in args.tests if "game-path" in d):
                 gameid = find_id_from_game_path(v.get("game-path"))
