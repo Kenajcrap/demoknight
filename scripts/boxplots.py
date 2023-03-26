@@ -13,8 +13,8 @@ def main(argv):
         for k, v in results[0].items():
             if isinstance(v, list):
                 data = [res[k] for res in results]
-                #[d.sort() for d in data]
-                #[[d.pop() for _ in range(5)] for d in data]
+                # [d.sort() for d in data]
+                # [[d.pop() for _ in range(5)] for d in data]
                 fig, ax = pl.subplots()
                 bp = ax.boxplot(
                     data,
@@ -48,26 +48,32 @@ def main(argv):
                     x_pos = i + (1 / 2) + 1
 
                     pl.text(
-                        x_pos, y_pos, f"t: {round(t,3)}\np: {round(p,3)}", ha="center", va="center"
+                        x_pos,
+                        y_pos,
+                        f"t: {round(t,3)}\np: {round(p,3)}",
+                        ha="center",
+                        va="center",
                     )
 
                     ax.add_patch(
                         mpatches.FancyArrowPatch(
-                            (x_pos - 0.25, y_pos-(box2_mean-box1_mean)/4),
-                            (x_pos + 0.25, y_pos+(box2_mean-box1_mean)/4),
+                            (x_pos - 0.25, y_pos - (box2_mean - box1_mean) / 4),
+                            (x_pos + 0.25, y_pos + (box2_mean - box1_mean) / 4),
                             mutation_scale=20,
                             arrowstyle="->",
-                            color="green"
+                            color="green",
                         )
                     )
-                pl.legend([bp['means'][0],bp['medians'][0]],["Mean", "Median"])
+                pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
                 pl.title(f"{k} ({len(data[0])} samples)")
-                ax.annotate("Windows 10 build 19041.vb_release.191206-1406, GTX 1660 Super, AMD Ryzen 5 3600,\n1920x1080 Highest, gorge1.dem (tick 466, 20 seconds duration)",
-                    xy = (1.0, -0.2),
-                    xycoords='axes fraction',
-                    ha='right',
+                ax.annotate(
+                    "Windows 10 build 19041.vb_release.191206-1406, GTX 1660 Super, AMD Ryzen 5 3600,\n1920x1080 Highest, gorge1.dem (tick 466, 20 seconds duration)",
+                    xy=(1.0, -0.2),
+                    xycoords="axes fraction",
+                    ha="right",
                     va="center",
-                    fontsize=6)
+                    fontsize=6,
+                )
                 pl.xlabel("Version")
                 pl.ylabel("Miliseconds")
                 pl.tight_layout()

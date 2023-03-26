@@ -10,7 +10,7 @@ authors = [
 description = "Automate source engine benchmark capture using rcon and mangohud"
 readme = "readme.md"
 requires-python = ">=3.7"
-version = "0.0.2"
+version = "0.1.0"
 keywords = ["rcon", "mangohud", "source-engine"]
 license = {text = "GPL-3"}
 classifiers = [
@@ -25,12 +25,15 @@ dependencies = [
     "watchfiles",
     "pyyaml",
     "pywin32; platform_system=='Windows'",
-    "mangohud-control; platform_system=='Linux'"
+    "mangohud-control; platform_system=='Linux'",
+    "system-query",
+    "pycuda",
+    "pint"
 ]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.2"
+version = "0.1.0"
 version_files = [
     "pyproject.toml:version"
 ]

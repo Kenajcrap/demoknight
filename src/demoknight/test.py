@@ -1,10 +1,11 @@
 import logging
-import re
 from argparse import Namespace
 from datetime import datetime
 from os import environ
 from platform import system
 from time import perf_counter, sleep
+from tempfile import gettempdir
+from pathlib import Path
 
 import numpy as np
 from psutil import Popen, subprocess
@@ -51,13 +52,17 @@ class Test:
                     f"={args.raw_path.absolute() / args.output_file / self.name}"
                 ),
             )
-            mangohud_conf = ",".join(
+            mangohud_conf = "\n".join(
                 Test.required_mangohud_conf + specific_mangohud_conf
             )
+            temp_conf_dir = Path(gettempdir()) / "demoknight/MangoHud.conf"
+            with open(temp_conf_dir, "w") as conf_file:
+                conf_file.write(mangohud_conf)
             kwargs.update(start_new_session=True)
 
             specific_environ = Test.game_environ.copy()
-            specific_environ.update({"MANGOHUD_CONFIG": mangohud_conf})
+            # specific_environ.update({"MANGOHUD_CONFIG": mangohud_conf})
+            specific_environ.update({"MANGOHUD_CONFIGFILE": str(temp_conf_dir)})
             kwargs.update(env=specific_environ)
         else:
             raise NotImplementedError(

@@ -400,10 +400,10 @@ class Game(psutil.Popen):
                     # if "MANGOHUD" not in proc_env:
                     if "GAME_DEBUGGER" not in proc_env:
                         return SteamState.NO_MANGOHUD
-                    if "MANGOHUD_CONFIG" not in proc_env:
+                    if "MANGOHUD_CONFIGFILE" not in proc_env:
                         return SteamState.NOT_CONFIGURED
-                    for cfg in env["MANGOHUD_CONFIG"].split(","):
-                        if cfg not in proc_env["MANGOHUD_CONFIG"].split(","):
+                    for cfg in env["MANGOHUD_CONFIGFILE"].split(","):
+                        if cfg not in proc_env["MANGOHUD_CONFIGFILE"].split(","):
                             return SteamState.NOT_CONFIGURED
                 return SteamState.CONFIGURED
         return SteamState.NOT_STARTED
