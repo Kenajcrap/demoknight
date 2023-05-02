@@ -308,7 +308,7 @@ class Game(psutil.Popen):
             )
         self.rcon("demo_timescale 0.01")
         # Wait for the demo to finish loading
-        self._wait_for_console(r"Demo message")
+        self._wait_for_tick(0)
         self.rcon("demo_timescale 1; demo_debug 0")
 
     def quit(self):
@@ -339,15 +339,15 @@ class Game(psutil.Popen):
             scale = (tick_interval * (tick - end)) / 2
             if scale > 12:
                 self.rcon(f"demo_gototick {end}")
-                self._wait_for_console(str(end)[:-1] + r"[0-9] dem_usercmd")
+                self._wait_for_tick(end)
                 continue
             else:
                 logging.warning(f"timescale: {scale} end: {end}")
                 self.rcon(f"demo_timescale {scale}")
-                self._wait_for_console(str(end)[:-1] + r"[0-9] dem_usercmd")
+                self._wait_for_tick(end)
         logging.warning(f"waiting for: {tick}")
         self.rcon("demo_timescale 0.05")
-        self._wait_for_console(str(tick)[:-1] + r"[0-9] dem_usercmd")
+        self._wait_for_tick(tick)
         self.rcon("demo_debug 0; demo_timescale 1")
 
     @staticmethod
@@ -367,9 +367,9 @@ class Game(psutil.Popen):
                     return cur_port
             raise ValueError("Could not find empty port for rcon after 10 retries")
 
-    def _wait_for_console(self, regex_pattern):
+    def _wait_for_tick(self, tick):
         # print(steamdir)
-        logpat = re.compile(regex_pattern)
+        logpat = re.compile(r"[0-9]+(?= dem\_usercmd)")
         with open(self.log_path) as f:
             for _ in watch(
                 self.log_path,
@@ -380,9 +380,11 @@ class Game(psutil.Popen):
                     self.last_position = 0
                 f.seek(self.last_position)
                 loglines = f.readlines()
-                self.last_position = f.tell() - 200
-                for line in loglines:
-                    if logpat.search(line.strip()):
+                self.last_position = f.tell() - 20  # a bit of overlap wont hurt
+                for line in reversed(loglines):
+                    # Start from the last one because time only moves foward
+                    regm = logpat.match(line.strip())
+                    if regm and int(regm.group()) >= tick:
                         return self.last_position
 
     @staticmethod
