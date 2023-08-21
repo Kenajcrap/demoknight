@@ -55,7 +55,9 @@ class Test:
             mangohud_conf = "\n".join(
                 Test.required_mangohud_conf + specific_mangohud_conf
             )
-            temp_conf_dir = Path(gettempdir()) / "demoknight/MangoHud.conf"
+            temp_dir = Path(gettempdir()) / "demoknight"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            temp_conf_dir = temp_dir / "MangoHud.conf"
             with open(temp_conf_dir, "w") as conf_file:
                 conf_file.write(mangohud_conf)
             kwargs.update(start_new_session=True)
@@ -117,11 +119,26 @@ class Test:
                 )
 
             # Go to tick and wait for fast-foward to finish
-            gm.gototick(
-                int(args.start_tick - args.start_buffer * (1 / args.tick_interval)),
-                args.tick_interval,
-            )
-
+            while True:
+                try:
+                    gm.gototick(
+                        int(
+                            args.start_tick
+                            - args.start_buffer * (1 / args.tick_interval)
+                        ),
+                        args.tick_interval,
+                    )
+                    break
+                except TimeoutError as e:
+                    logging.error(e)
+                    gm.rcon("disconnect")
+                    gm.playdemo(args.demo_path)
+                    continue
+                except RuntimeError as e:
+                    logging.critical(e)
+                    gm.rcon("disconnect")
+                    gm.playdemo(args.demo_path)
+                    continue
             gm.not_capturing.clear()
             if system().startswith("Win"):
                 specific_presentmon_conf = (

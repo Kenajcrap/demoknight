@@ -262,7 +262,7 @@ class Game(psutil.Popen):
                     passwd=self.password,
                     # extremely long timeout because demo_timescale messes
                     # with response time
-                    timeout=30,
+                    timeout=5,
                 ) as client:
                     response = client.run(command)
             except TimeoutError:
@@ -277,7 +277,7 @@ class Game(psutil.Popen):
                 logging.info("Rcon connection refused, retrying in 1 second")
                 sleep(1)
                 continue
-            except ConnectionResetError:
+            except (ConnectionResetError, ConnectionAbortedError):
                 logging.info("Rcon connection reset, retrying in 1 second")
                 sleep(1)
                 continue
@@ -308,7 +308,7 @@ class Game(psutil.Popen):
             )
         self.rcon("demo_timescale 0.01")
         # Wait for the demo to finish loading
-        self._wait_for_tick(0)
+        self._wait_for_tick(10)
         self.rcon("demo_timescale 1; demo_debug 0")
 
     def quit(self):
@@ -339,16 +339,21 @@ class Game(psutil.Popen):
             scale = (tick_interval * (tick - end)) / 2
             if scale > 12:
                 self.rcon(f"demo_gototick {end}")
-                self._wait_for_tick(end)
+                end = self._wait_for_tick(end)
                 continue
             else:
                 logging.warning(f"timescale: {scale} end: {end}")
                 self.rcon(f"demo_timescale {scale}")
-                self._wait_for_tick(end)
+                end = self._wait_for_tick(end)
+        if end > tick:
+            raise TimeoutError(
+                "Log file was not updated fast enough, making the demo go past desired tick"
+            )
         logging.warning(f"waiting for: {tick}")
         self.rcon("demo_timescale 0.05")
         self._wait_for_tick(tick)
         self.rcon("demo_debug 0; demo_timescale 1")
+        return True
 
     @staticmethod
     def _rand_pass():
@@ -369,23 +374,33 @@ class Game(psutil.Popen):
 
     def _wait_for_tick(self, tick):
         # print(steamdir)
-        logpat = re.compile(r"[0-9]+(?= dem\_usercmd)")
+        curr_tick_pat = re.compile(r"[0-9]+(?= dem\_usercmd)")
+        demo_stop_pat = re.compile(r"dem\_stop")
         with open(self.log_path) as f:
             for _ in watch(
                 self.log_path,
                 force_polling=system().startswith("Win"),
                 poll_delay_ms=50,
+                yield_on_timeout=True,
             ):
                 if self.last_position > os.path.getsize(self.log_path):
                     self.last_position = 0
                 f.seek(self.last_position)
                 loglines = f.readlines()
-                self.last_position = f.tell() - 20  # a bit of overlap wont hurt
+                self.last_position = f.tell() - 100  # a bit of overlap wont hlurt
                 for line in reversed(loglines):
                     # Start from the last one because time only moves foward
-                    regm = logpat.match(line.strip())
-                    if regm and int(regm.group()) >= tick:
-                        return self.last_position
+                    regm = curr_tick_pat.match(line.strip())
+                    if regm:
+                        currtick = int(regm.group())
+                        if currtick >= tick:
+                            return currtick
+                    if demo_stop_pat.search(line.strip()):
+                        raise RuntimeError(
+                            "Demo ended unexpectedly, probably due to log file lagging behind"
+                        )
+            else:
+                raise TimeoutError("Log file took more than 5 seconds to be updated")
 
     @staticmethod
     def _steam_state(env=(), **kwargs):
