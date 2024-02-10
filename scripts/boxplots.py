@@ -4,23 +4,76 @@ import numpy as np
 import scipy
 import json
 import sys
+from platform import system
 from pathlib import Path
 
 
 def main(argv):
     with open(Path(argv[0]).absolute(), encoding="utf-8") as outfile:
-        results = json.loads(outfile.read())
-        for k, v in results[0].items():
+        file = json.loads(outfile.read())
+        summary = []
+        # Import mangohud/presentmon data and set some constants
+        if system().startswith("Win"):
+            usecols = (9, 7)
+            skiprows = 1
+            elapsed_second = 1
+            frametime_ms = 1
+        elif system().startswith("Linux"):
+            usecols = (1, 13)
+            skiprows = 3
+            elapsed_second = 1000000
+            frametime_ms = 1
+        for test in file["tests"]:
+            entry = {
+                "name": test["name"],
+                "Average Frametime": [],
+                "Variance of Frametime": [],
+            }
+            for n in argv[1:]:
+                try:
+                    prcnt = float(n)
+                except:
+                    raise ValueError(
+                        "Percentages must be floats, with '.' as decimal separator"
+                    )
+                if prcnt <= 0:
+                    raise ValueError("Percentages must be positive integers")
+                entry[f"{n}% High of Frametime"] = []
+            print(entry)
+            for i, res in enumerate(test["results"]):
+                if i == 0 and not file["keep_first_pass"]:
+                    continue
+                arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
+                # We actually start capturing 2 seconds before we need to, so get
+                # rid of those rows
+                arr[:, 1] -= file["start_buffer"] * elapsed_second
+                arr = arr[arr[..., 1] >= 0]
+                entry["Average Frametime"].append(
+                    np.average(arr[:, 0] / frametime_ms, axis=0)
+                )
+                entry["Variance of Frametime"].append(
+                    np.var(arr[:, 0] / frametime_ms, axis=0)
+                )
+                for n in argv[1:]:
+                    if n:
+                        entry[f"{n}% High of Frametime"].append(
+                            np.percentile(
+                                arr[:, 0] / frametime_ms, 100 - float(n), axis=0
+                            )
+                        )
+
+            summary.append(entry)
+        for k, v in summary[0].items():
             if isinstance(v, list):
-                data = [res[k] for res in results]
+                data = [res[k] for res in summary]
                 # [d.sort() for d in data]
                 # [[d.pop() for _ in range(5)] for d in data]
                 fig, ax = pl.subplots()
                 bp = ax.boxplot(
                     data,
                     autorange=True,
-                    labels=[res["name"] for res in results],
-                    widths=0.3,
+                    widths=0.4,
+                    labels=[res["name"] for res in summary],
                     meanline=True,
                     showmeans=True,
                 )
@@ -50,9 +103,9 @@ def main(argv):
                     pl.text(
                         x_pos,
                         y_pos,
-                        f"t: {round(t,3)}\np: {round(p,3)}",
+                        f"p:{round(p,3)}",
                         ha="center",
-                        va="center",
+                        va="bottom",
                     )
 
                     ax.add_patch(
@@ -66,16 +119,18 @@ def main(argv):
                     )
                 pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
                 pl.title(f"{k} ({len(data[0])} samples)")
+                pl.xticks(rotation=10, ha="right")
                 ax.annotate(
-                    "Windows 10 build 19041.vb_release.191206-1406, GTX 1660 Super, AMD Ryzen 5 3600,\n1920x1080 Highest, gorge1.dem (tick 466, 20 seconds duration)",
-                    xy=(1.0, -0.2),
+                    f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n1920x1080 mastercomfig low, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",
+                    xy=(1, -0.3),
                     xycoords="axes fraction",
                     ha="right",
-                    va="center",
+                    va="bottom",
                     fontsize=6,
                 )
                 pl.xlabel("Version")
                 pl.ylabel("Miliseconds")
+                fig.set_size_inches(3.5 + (0.5 * len(data)), 4.8)
                 pl.tight_layout()
                 pl.show()
 
