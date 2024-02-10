@@ -1,5 +1,4 @@
 import argparse
-import csv
 import json
 import logging
 import os
@@ -299,6 +298,18 @@ def main():
     )
 
     parser.add_argument(
+        "-L",
+        "--loops",
+        default=1,
+        type=int,
+        help=(
+            "Number of times to run the benchmark. If set to more than 1,"
+            " the benchmark will start from the first test again after finishing"
+            " the last one. Use 0 to loop indefinitely. Default: %(default)s"
+        ),
+    )
+
+    parser.add_argument(
         "-k",
         "--keep-first-pass",
         default=False,
@@ -356,14 +367,6 @@ def main():
         type=Path,
         default=Path(f"summary_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"),
         help="path for the generated summary file. Default: %(default)s",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--format",
-        default="csv",
-        choices=["csv", "json"],
-        help="Format of the output file. Default: %(default)s",
     )
 
     parser.add_argument(
@@ -478,6 +481,39 @@ def main():
         tests.append(Test(args, i))
 
     args.system = {"CPU": get_cpu_name(), "GPU": get_gpu_name(), "OS": platform()}
+    loops = 0
+    while loops + 1 != args.loops:
+        for test in tests:
+            success = False
+            while not success:
+                print(f"Starting test {test.name}")
+                try:
+                    test.capture(args)
+                except NoSuchProcess:
+                    logging.error(
+                        "The game seems to have crashed, retrying entire test"
+                    )
+                    # TODO: If we later allow the tests to run continuously, we need to
+                    # handle the clearing of results better
+                    test.results.clear()
+                    continue
+                except KeyboardInterrupt:
+                    logging.warning(
+                        "KeyboardInterrupt received. Some tests will probably end up with more passes than others."
+                    )
+                    exit(0)
+                args.tests[test.index]["results"] = test.results
+                print(f"Finished test {test.name}")
+                success = True
+                with open(
+                    f"{args.output_file.absolute()}.json",
+                    "w",
+                    newline="",
+                    encoding="utf-8",
+                ) as outfile:
+                    json.dump(args.__dict__, outfile, default=str)
+                # test.watchdog.join()
+
     print("done")
 
 
@@ -738,6 +774,29 @@ if system().startswith("Win"):
                 " https://github.com/GameTechDev/PresentMon#user-access-denied"
             )
             sys.exit(1)
+
+
+def get_cpu_name():
+    if system() == "Windows":
+        return processor()
+    elif system() == "Darwin":
+        return machine()
+    elif system() == "Linux":
+        with open("/proc/cpuinfo", "r") as f:
+            for line in f:
+                if "model name" in line:
+                    return line.split(":")[1].strip()
+    return "Unknown"
+
+
+def get_gpu_name():
+    try:
+        gpus = GPUtil.getGPUs()
+        if gpus:
+            return gpus[0].name
+    except:
+        pass
+    return "Unknown"
 
 
 def construct_yaml_tuple(self, node):
