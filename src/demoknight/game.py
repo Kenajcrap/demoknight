@@ -358,7 +358,7 @@ class Game(psutil.Popen):
     @staticmethod
     def _rand_pass():
         ch = string.ascii_letters + string.digits
-        password = "".join(SystemRandom().choice(ch) for _ in range(randint(20, 30)))
+        password = "".join(SystemRandom().choice(ch) for _ in range(randint(6, 10)))
         logging.debug(f"rcon password: {password}")
         return password
 
