@@ -74,13 +74,6 @@ def main():
         if file_dict:
             args.tests = file_dict.pop("tests", [])
 
-        # Take the list of percentiles out, we will treat them sepparately
-        if file_dict:
-            args.percentiles = file_dict.pop("percentiles", [0.1, 1])
-            for prcnt in args.percentiles:
-                if not isinstance(prcnt, (float, int)):
-                    raise ValueError("Percentiles must be numbers")
-
         # The rest goes in a string to be parsed the same as command line options,
         # unless the options are empty strings
         for k, v in file_dict.items():
@@ -355,18 +348,6 @@ def main():
         default=20.0,
         type=float,
         help="Benchmark duration in seconds. Default: %(default)s.",
-    )
-
-    parser.add_argument(
-        "-p",
-        "--percentiles",
-        nargs="+",
-        type=float,
-        default=getattr(args, "percentiles", [0.1, 1]),
-        help=(
-            "Percentile high of frametime to be calculated in addition to average and"
-            " variance for each pass."
-        ),
     )
 
     parser.add_argument(
