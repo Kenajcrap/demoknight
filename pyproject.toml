@@ -25,9 +25,8 @@ dependencies = [
     "watchfiles",
     "pyyaml",
     "pywin32; platform_system=='Windows'",
-    "mangohud-control; platform_system=='Linux'",
-    "system-query",
-    "pycuda",
+    "mangohud-control @ git+https://github.com/flightlessmango/MangoHud.git@master#subdirectory=control ; platform_system=='Linux'",
+    "GPUtil",
     "pint"
 ]
 

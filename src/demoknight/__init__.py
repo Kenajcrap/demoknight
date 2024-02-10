@@ -7,7 +7,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from platform import system
+from platform import system, platform
 from tempfile import gettempdir
 
 import numpy as np
@@ -16,6 +16,7 @@ import vdf
 import yaml
 from psutil import NoSuchProcess
 from steamid import SteamID
+import GPUtil
 
 from .test import Test
 
@@ -242,6 +243,16 @@ def main():
         type=lambda x: float((1 / x if 66 <= x <= 67 else 0.015)),
         dest="tick_interval",
         help="Server tickrate of the demo being played. Default: %(default)s",
+    )
+
+    parser.add_argument(
+        "--comment",
+        type=str,
+        default="",
+        help=(
+            "Comment attached to the output file, to be used in data analysis"
+            " by other tools"
+        ),
     )
 
     parser.add_argument(
@@ -485,83 +496,7 @@ def main():
     for i, test in enumerate(args.tests):
         tests.append(Test(args, i))
 
-    for test in tests:
-        success = False
-        while not success:
-            print(f"Starting test {test.name}")
-            try:
-                test.capture(args)
-            except NoSuchProcess:
-                logging.error("The game seems to have crashed, retrying entire test")
-                # TODO: If we later allow the tests to run continuously, we need to
-                # handle the clearing of results better
-                test.results.clear()
-                continue
-            print(f"Finished test {test.name}")
-            success = True
-            # test.watchdog.join()
-
-    # Import mangohud/presentmon data and set some constants
-    if system().startswith("Win"):
-        usecols = (9, 7)
-        skiprows = 1
-        elapsed_second = 1
-        frametime_ms = 1
-    elif system().startswith("Linux"):
-        usecols = (1, 11)
-        skiprows = 3
-        elapsed_second = 1000000000
-        frametime_ms = 1000
-    summary = []
-    for test in tests:
-        entry = {
-            "name": test.name,
-            "Average Frametime": [],
-            "Variance of Frametime": [],
-        }
-        for n in args.percentiles:
-            if n:
-                entry[f"{n}% High of Frametime"] = []
-        for i, res in enumerate(test.results):
-            if i == 0 and not args.keep_first_pass:
-                continue
-            arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
-            # We actually start capturing 2 seconds before we need to, so get
-            # rid of those rows
-            arr[:, 1] -= args.start_buffer * elapsed_second
-            arr = arr[arr[..., 1] >= 0]
-            entry["Average Frametime"].append(
-                np.average(arr[:, 0] / frametime_ms, axis=0)
-            )
-            entry["Variance of Frametime"].append(
-                np.var(arr[:, 0] / frametime_ms, axis=0)
-            )
-            for n in args.percentiles:
-                if n:
-                    entry[f"{n}% High of Frametime"].append(
-                        np.percentile(arr[:, 0] / frametime_ms, 100 - n, axis=0)
-                    )
-
-        summary.append(entry)
-    with open(
-        f"{args.output_file.absolute()}.{args.format}",
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as outfile:
-        if args.format == "json":
-            json.dump(summary, outfile)
-        elif args.format == "csv":
-            writer = csv.DictWriter(
-                outfile,
-                fieldnames=["name", "Average Frametime", "Variance of Frametime"]
-                + [f"{n}% High of Frametime" for n in args.percentiles],
-            )
-            writer.writeheader()
-            for test in summary:
-                test["name"] = [test["name"]] * len(test["Average Frametime"])
-                v2 = [dict(zip(test, t)) for t in zip(*test.values())]
-                writer.writerows(v2)
+    args.system = {"CPU": get_cpu_name(), "GPU": get_gpu_name(), "OS": platform()}
     print("done")
 
 
