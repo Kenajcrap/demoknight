@@ -23,12 +23,6 @@ The automation also allows the user to leverage simple statistical analysis to i
 ## Installation
 
 For Linux users [Mangohud](https://github.com/flightlessmango/MangoHud) needs to be installed and be accessible through `mangohud`.
-Also, you will need to clone their repo and manually install their python lib:
-
-```bash
-git clone https://github.com/flightlessmango/MangoHud && cd MangoHud
-pip install control
-```
 
 For Windows users, [PresentMon](https://github.com/GameTechDev/PresentMon) needs to be downloaded and either be accessible through `presentmon` (by adding it to PATH) or pointed to with `--presentmon-path` launch option.
 
@@ -48,83 +42,75 @@ A list of options is available doing `demoknight -h`:
 ```text
 usage: demoknight [-h] [-j PATH] [-v {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-g GAMEID]
                   [-G GAME_PATH] [-S STEAM_PATH] [-T TICK_INTERVAL | -t TICK_INTERVAL]
-                  [--raw-path RAW_PATH] -D DEMO_PATH --presentmon-path PRESENTMON_PATH
-                  [-l LAUNCH_OPTIONS] [-n PASSES] [-k [KEEP_FIRST_PASS]]
+                  [--comment COMMENT] [--raw-path RAW_PATH] -D DEMO_PATH
+                  [-l LAUNCH_OPTIONS] [-n PASSES] [-L LOOPS] [-k [KEEP_FIRST_PASS]]
                   [-s START_TICK] [--start-buffer START_BUFFER] [-d DURATION]
-                  [-p PERCENTILES [PERCENTILES ...]] [-o OUTPUT_FILE] [-f {csv,json}]
-                  [-b [NO_BASELINE]]
+                  [-o OUTPUT_FILE] [-b [NO_BASELINE]]
                   [tests ...]
 
 positional arguments:
   tests                 Space separated inline test list instead of reading from yaml
-                        (one item per test). Options starting with '+' will be treated
-                        as cvars and executed in the main menu. Options starting with
-                        '-' will be treated as launch options. Use ' -- ' to separate
-                        this from the named options if launch options are used
+                        (one item per test). Options starting with '+' will be treated as
+                        cvars and executed in the main menu. Options starting with '-'
+                        will be treated as launch options. Use ' -- ' to separate this
+                        from the named options if launch options are used
 
 options:
   -h, --help            show this help message and exit
   -j PATH, --job-file PATH
                         Path to yaml configuration file. Supports all launch options
                         except "job-file" and "help", as well as a an advanced list of
-                        changes for each test. Options in the file will be overwritten
-                        by options passed as command line options
+                        changes for each test. Options in the file will be overwritten by
+                        options passed as command line options
   -v {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --verbosity {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Logging verbosity. Default: WARNING
   -g GAMEID, --gameid GAMEID
                         The gameid used to launch the game through Steam. Takes
-                        preference over 'game-path'. Required if 'game-path' is not
-                        used
+                        preference over 'game-path'. Required if 'game-path' is not used
   -G GAME_PATH, --game-path GAME_PATH
                         Path to game executable. If gameid is not specified, game will
                         not launch through Steam. Required if 'gameid' is not used
   -S STEAM_PATH, --steam-path STEAM_PATH
-                        Path to the steam folder. Automatically detected if not
-                        specified
+                        Path to the steam folder. Automatically detected if not specified
   -T TICK_INTERVAL, --tick-interval TICK_INTERVAL
-                        Time interval between ticks of the demo being played, in
-                        seconds. Default: 0.015
+                        Time interval between ticks of the demo being played, in seconds.
+                        Default: 0.015
   -t TICK_INTERVAL, --tickrate TICK_INTERVAL
                         Server tickrate of the demo being played. Default: None
+  --comment COMMENT     Comment attached to the output file, to be used in data analysis
+                        by other tools
   --raw-path RAW_PATH   Path to the mangohud/presentmon log files. Defaults to the
                         temporary folder of your OS.
   -D DEMO_PATH, --demo-path DEMO_PATH
-                        Path to the demo file, starting from the game's 'mod'
-                        directory (same as the 'playdemo' console command in-game).
-                        Required
-  --presentmon-path PRESENTMON_PATH
-                        (Windows only) Path to PresentMon executable. Default:
-                        'presentmon'
+                        Path to the demo file, starting from the game's 'mod' directory
+                        (same as the 'playdemo' console command in-game). Required
   -l LAUNCH_OPTIONS, --launch-options LAUNCH_OPTIONS
                         Additional launch options to use for every test, added to the
-                        ones gotten from steam if using --gameid. If using --game-
-                        path, don't forget required launch options like '-game'. For
-                        multiple arguments, use the form '-l="-option1 -option2"')
+                        ones gotten from steam if using --gameid. If using --game-path,
+                        don't forget required launch options like '-game'. For multiple
+                        arguments, use the form '-l="-option1 -option2"')
   -n PASSES, --passes PASSES
                         Number of passes done for each test. Default: 5
+  -L LOOPS, --loops LOOPS
+                        Number of times to run the benchmark. If set to more than 1, the
+                        benchmark will start from the first test again after finishing
+                        the last one. Use 0 to loop indefinitely. Default: 1
   -k [KEEP_FIRST_PASS], --keep-first-pass [KEEP_FIRST_PASS]
-                        Keep first pass of each test. Discarting the first pass is
-                        needed if the demo section used for benchmark is the very
-                        start, since performance there is not representative. Default:
-                        False
+                        Keep first pass of each test. Discarting the first pass is needed
+                        if the demo section used for benchmark is the very start, since
+                        performance there is not representative. Default: False
   -s START_TICK, --start-tick START_TICK
-                        Start of the benchmark section of the demo in ticks. Default:
-                        187
+                        Start of the benchmark section of the demo in ticks. Default: 187
   --start-buffer START_BUFFER
                         After fast-fowarding a demo, particles and physics objects can
                         take longer than they should to de-spawn. This safety buffer
-                        ensures that they do before starting the benchmark. In
-                        seconds. Default: 2
+                        ensures that they do before starting the benchmark. In seconds.
+                        Default: 2
   -d DURATION, --duration DURATION
                         Benchmark duration in seconds. Default: 20.0.
-  -p PERCENTILES [PERCENTILES ...], --percentiles PERCENTILES [PERCENTILES ...]
-                        Percentile high of frametime to be calculated in addition to
-                        average and variance for each pass.
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         path for the generated summary file. Default:
-                        summary_2023-03-25_01-12-22
-  -f {csv,json}, --format {csv,json}
-                        Format of the output file. Default: csv
+                        summary_2024-02-10_19-59-34
   -b [NO_BASELINE], --no-baseline [NO_BASELINE]
                         Whether or not to capture a baseline test without applying
                         changes. Default: False
@@ -136,7 +122,7 @@ Examples:
 demoknight --help
 demonkight --job_file benchconfigfile.yaml
 demoknight -g 440 --job_file benchconfigfile.yaml
-demoknight -g 770 --start-tick 35 --duration 20 --tickrate 64 --passes 15 --demo-path demos/benchdemo --format json -- -threads 2 +exec testconfig +r_cheapwaterend 1
+demoknight -g 770 --start-tick 35 --duration 20 --tickrate 64 --passes 15 --demo-path demos/benchdemo -- -threads 2 +exec testconfig +r_cheapwaterend 1
 demoknight -G /Games/SteamLibrary/steamapps/common/Team\ Fortress\ 2/hl2.sh --launch_options="-steam -game tf -insecure" --k
 ```
 
