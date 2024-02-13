@@ -2,6 +2,7 @@ import logging
 import string
 import socket
 import re
+import shutil
 
 from random import SystemRandom, randint
 from argparse import Namespace
@@ -14,6 +15,7 @@ from pathlib import Path
 
 import numpy as np
 from psutil import Popen, subprocess
+from steamid import SteamID
 
 # TODO: Undo monkey patch when pull request is merged: https://github.com/ValvePython/vdf/pull/53
 from . import vdf_patch
@@ -57,7 +59,8 @@ class Test:
     )
 
     game_environ = environ.copy()
-    game_environ.update({"GAME_DEBUGGER": "mangohud"})
+    # game_environ.update({"MANGOHUD": "1"})
+    # game_environ.update({"GAME_DEBUGGER": "mangohud"})
 
     def __init__(self, args, index):
         self.name = args.tests[index]["name"]
@@ -125,117 +128,163 @@ class Test:
                 "Unsupported OS, this tool is only available for Windows and Linux"
             )
 
-        test_launch_options = args.tests[self.index]["changes"].get(
-            "launch-options", ()
+        local_conf_path = Test._get_user_local_config_path(args.steam_path, args.gameid)
+        local_config = Test._try_parsing_vdf(local_conf_path)
+
+        user_launch_options = local_config["UserLocalConfigStore"]["Software"]["Valve"][
+            "Steam"
+        ]["apps"][str(args.gameid)]["LaunchOptions"]
+        (
+            user_env,
+            user_commands,
+            user_game_args,
+        ) = Test._separate_launch_options_elements(user_launch_options)
+
+        local_config["UserLocalConfigStore"]["Software"]["Valve"]["Steam"]["apps"][
+            str(args.gameid)
+        ]["LaunchOptions"] = " ".join(
+            user_env
+            + (f"MANGOHUD_CONFIGFILE={temp_conf_dir}", "mangohud")
+            + user_commands
+            + ("%command%",)
+            + user_game_args
+            + all_launch_options
         )
-        # Start game and wait for it to finish loading
-        gm = Game(
-            gameid=args.gameid,
-            game_path=args.tests[self.index].get("game-path") or args.game_path,
-            steam_path=args.steam_path,
-            l_opts=all_launch_options,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            **kwargs,
-        )
 
-        # Due to all of the crazy shit people make run when the game starts,
-        # can't think of a better way to detect if they have finished running
-        # than this
-        # TODO: Include this in Game.update_state() instead
-        tictoc = []
-        for _ in range(200):
-            tic = perf_counter()
-            gm.rcon("echo Waiting for responsiveness")
-            toc = perf_counter()
-            diff = toc - tic
-            logging.debug(f"Rcon response delay: {diff}")
-            sleep(0.1)
-            tictoc.append(diff)
-            mean = np.mean(tictoc[-50:])
-            if len(tictoc) > 50 and abs(mean - diff < diff * 0.01):
-                break
+        # Backup local conf
+        local_conf_bak = local_conf_path.parent / "localconfig.vdf.bak"
+        if local_conf_bak.exists():
+            local_conf_bak.unlink()
 
-        for i in range(args.passes):
-            # Apply cvars for each test
-            for ch in args.tests[self.index]["changes"].get("cvars", []):
-                gm.rcon(ch)
+        shutil.copy2(local_conf_path, local_conf_bak)
 
-            # Play demo and wait for game to load
-            gm.playdemo(args.demo_path)
+        # TODO: This catch is extremely broad, but I'm terrified of losing people's files
+        try:
+            # Dump modified conf
+            vdf.dump(local_config, open(local_conf_path, "w"), pretty=True)
 
-            if args.start_tick - args.start_buffer * (1 / args.tick_interval) < 15:
-                raise Exception(
-                    "Due to constraints with frametime capture and demos, minimum"
-                    f" value for -s/--start-tick is {15 + args.start_buffer}"
-                )
+            # Start game and wait for it to finish loading
+            gm = Game(
+                gameid=args.gameid,
+                game_path=args.tests[self.index].get("game-path") or args.game_path,
+                steam_path=args.steam_path,
+                l_opts=all_launch_options,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                **kwargs,
+            )
 
-            # Go to tick and wait for fast-foward to finish
-            while True:
-                try:
-                    gm.gototick(
-                        int(
-                            args.start_tick
-                            - args.start_buffer * (1 / args.tick_interval)
-                        ),
-                        args.tick_interval,
-                    )
+            # Due to all of the crazy shit people make run when the game starts,
+            # can't think of a better way to detect if they have finished running
+            # than this
+            # TODO: Include this in Game.update_state() instead
+            tictoc = []
+            for _ in range(200):
+                tic = perf_counter()
+                gm.rcon("echo Waiting for responsiveness")
+                toc = perf_counter()
+                diff = toc - tic
+                logging.debug(f"Rcon response delay: {diff}")
+                sleep(0.1)
+                tictoc.append(diff)
+                mean = np.mean(tictoc[-50:])
+                if len(tictoc) > 50 and abs(mean - diff < diff * 0.01):
                     break
-                except TimeoutError as e:
-                    logging.error(e)
-                    gm.rcon("disconnect")
-                    gm.playdemo(args.demo_path)
-                    continue
-                except RuntimeError as e:
-                    logging.critical(e)
-                    gm.rcon("disconnect")
-                    gm.playdemo(args.demo_path)
-                    continue
-            gm.not_capturing.clear()
-            if system().startswith("Win"):
-                specific_presentmon_conf = (
-                    "-timed",
-                    str(args.duration + args.start_buffer),
-                    "-process_id",
-                    str(gm.pid),
-                    "-output_file",
-                    str(
-                        args.raw_path.absolute()
-                        / args.output_file
-                        / self.name
-                        / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-                    ),
-                )
-                Popen(
-                    (args.presentmon_path,)
-                    + specific_presentmon_conf
-                    + Test.required_presentmon_conf
-                )
 
-            if system().startswith("Linux"):
-                control.control(
-                    Namespace(cmd="start-logging", socket="mangohud", info="")
-                )
+            for i in range(args.passes):
+                # Apply cvars for each test
+                for ch in args.tests[self.index]["changes"].get("cvars", []):
+                    gm.rcon(ch)
 
-            # Extend duration due to mangohud bug
-            sleep(args.duration + args.start_buffer)
-            gm.not_capturing.set()
-            sleep(0.5)
+                # Play demo and wait for game to load
+                gm.playdemo(args.demo_path)
 
-            # Player animations seem to glitch out if I don't disconnect
-            # before doing "playdemo"
-            gm.rcon("disconnect")
-            sleep(0.5)
+                if args.start_tick - args.start_buffer * (1 / args.tick_interval) < 15:
+                    raise Exception(
+                        "Due to constraints with frametime capture and demos, minimum"
+                        f" value for -s/--start-tick is {15 + args.start_buffer}"
+                    )
 
-            p = args.raw_path.absolute() / args.output_file / self.name
-            logs = list(p.glob("./*[0-9].csv"))
-            logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                # Go to tick and wait for fast-foward to finish
+                while True:
+                    try:
+                        gm.gototick(
+                            int(
+                                args.start_tick
+                                - args.start_buffer * (1 / args.tick_interval)
+                            ),
+                            args.tick_interval,
+                        )
+                        break
+                    except TimeoutError as e:
+                        logging.error(e)
+                        gm.rcon("disconnect")
+                        gm.playdemo(args.demo_path)
+                        continue
+                    except RuntimeError as e:
+                        logging.critical(e)
+                        gm.rcon("disconnect")
+                        gm.playdemo(args.demo_path)
+                        continue
+                gm.not_capturing.clear()
+                if system().startswith("Win"):
+                    specific_presentmon_conf = (
+                        "-timed",
+                        str(args.duration + args.start_buffer),
+                        "-process_id",
+                        str(gm.pid),
+                        "-output_file",
+                        str(
+                            args.raw_path.absolute()
+                            / args.output_file
+                            / self.name
+                            / f"PresentMon-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+                        ),
+                    )
+                    Popen(
+                        (args.presentmon_path,)
+                        + specific_presentmon_conf
+                        + Test.required_presentmon_conf
+                    )
 
-            self.results.append(logs[0])
-            print(f"Finished pass {i}")
+                if system().startswith("Linux"):
+                    control.control(
+                        Namespace(cmd="start-logging", socket="mangohud", info="")
+                    )
 
-        gm.quit()
+                # Extend duration due to mangohud bug
+                sleep(args.duration + args.start_buffer)
+                gm.not_capturing.set()
+                sleep(0.5)
+
+                # Player animations seem to glitch out if I don't disconnect
+                # before doing "playdemo"
+                gm.rcon("disconnect")
+                sleep(0.5)
+
+                p = args.raw_path.absolute() / args.output_file / self.name
+                logs = list(p.glob("./*[0-9].csv"))
+                logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+
+                self.results.append(logs[0])
+                print(f"Finished pass {i}")
+
+            gm.quit()
+        except Exception as e:
+            # restore local conf
+            logging.critical("Test failed, restoring modified")
+            if local_conf_path.exists():
+                local_conf_path.unlink()
+
+            shutil.copy2(local_conf_bak, local_conf_path)
+            raise
+
+        # restore local conf
+        if local_conf_path:
+            local_conf_path.unlink()
+
+        shutil.copy2(local_conf_bak, local_conf_path)
         sleep(10)
 
     @staticmethod

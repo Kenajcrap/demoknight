@@ -6,9 +6,11 @@ import re
 import socket
 import string
 import threading
+import shutil
 from pathlib import Path
 from enum import Enum
 from platform import system
+from tempfile import gettempdir
 from random import SystemRandom, randint
 from time import sleep, time
 
@@ -56,7 +58,7 @@ class Game(psutil.Popen):
             elif system().startswith("Linux"):
                 steam_bin = "steam"
 
-            args = (str(steam_bin), "-applaunch", str(gameid)) + l_opts
+            args = (str(steam_bin), "-applaunch", str(gameid))
 
         else:
             args = ("mangohud", game_path) + l_opts
@@ -357,16 +359,16 @@ class Game(psutil.Popen):
                     f"Could not check if Steam is running: Access Denied\n{e}"
                 ) from e
             if "steam" in processes:
-                if system().startswith("Linux"):
-                    proc_env = proc.environ()
-                    # if "MANGOHUD" not in proc_env:
-                    if "GAME_DEBUGGER" not in proc_env:
-                        return SteamState.NO_MANGOHUD
-                    if "MANGOHUD_CONFIGFILE" not in proc_env:
-                        return SteamState.NOT_CONFIGURED
-                    for cfg in env["MANGOHUD_CONFIGFILE"].split(","):
-                        if cfg not in proc_env["MANGOHUD_CONFIGFILE"].split(","):
-                            return SteamState.NOT_CONFIGURED
+                # if system().startswith("Linux"):
+                # proc_env = proc.environ()
+                # if "MANGOHUD" not in proc_env:
+                # if "GAME_DEBUGGER" not in proc_env:
+                #    return SteamState.NO_MANGOHUD
+                # if "MANGOHUD_CONFIGFILE" not in proc_env:
+                #    return SteamState.NOT_CONFIGURED
+                # for cfg in env["MANGOHUD_CONFIGFILE"].split(","):
+                #    if cfg not in proc_env["MANGOHUD_CONFIGFILE"].split(","):
+                #        return SteamState.NOT_CONFIGURED
                 return SteamState.CONFIGURED
         return SteamState.NOT_STARTED
 

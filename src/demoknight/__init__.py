@@ -674,44 +674,6 @@ def find_id_from_game_path(game_path):
     return int(gameid)
 
 
-# Currently unused function, maybe useful later
-def get_user_launch_options(steam_path, gameid):
-    if system().startswith("Win"):
-        # TODO
-        return ""
-    # Steam running + most recent profile found most likely means he is logged
-    # in on this account right now
-    elif system().startswith("Linux"):
-        loginusers = try_parsing_file(steam_path / "config" / "loginusers.vdf")
-        steam_user = {"Timestamp": 0}
-        for steamid64, info in loginusers["users"].items():
-            newer = int(info["Timestamp"]) > steam_user["Timestamp"]
-            if info["MostRecent"] == 1 or newer:
-                steam_user["AccountID"] = SteamID(steamid64).accountid
-                steam_user["AccountName"] = info["AccountName"]
-                steam_user["Timestamp"] = int(info["Timestamp"])
-        if steam_user["Timestamp"] > 0:
-            logging.info(
-                f"Found most recent Steam account used: {steam_user['AccountName']}"
-            )
-        else:
-            logging.critical(
-                "Could not find any recently logged in steam accounts, make sure you"
-                " are logged in or use --nosteam"
-            )
-            sys.exit(2)
-        account_id = steam_user["AccountID"]
-
-        local_config_path = (
-            steam_path / "userdata" / str(account_id) / "config/localconfig.vdf"
-        )
-
-        local_config = try_parsing_file(local_config_path)
-
-        valve = local_config["UserLocalConfigStore"]["Software"]["Valve"]
-        return valve["Steam"]["apps"][gameid]["LaunchOptions"]
-
-
 def try_parsing_file(path):
     file_type = str(path).split(".")[-1]
     if file_type in ("vdf", "acf"):
@@ -779,8 +741,6 @@ if system().startswith("Win"):
 def get_cpu_name():
     if system() == "Windows":
         return processor()
-    elif system() == "Darwin":
-        return machine()
     elif system() == "Linux":
         with open("/proc/cpuinfo", "r") as f:
             for line in f:
