@@ -39,7 +39,6 @@ def main(argv):
                 if prcnt <= 0:
                     raise ValueError("Percentages must be positive integers")
                 entry[f"{n}% High of Frametime"] = []
-            print(entry)
             for i, res in enumerate(test["results"]):
                 if i == 0 and not file["keep_first_pass"]:
                     continue
@@ -121,7 +120,7 @@ def main(argv):
                 pl.title(f"{k} ({len(data[0])} samples)")
                 pl.xticks(rotation=10, ha="right")
                 ax.annotate(
-                    f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n1920x1080 mastercomfig low, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",
+                    f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n{file['comment']}, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",
                     xy=(1, -0.3),
                     xycoords="axes fraction",
                     ha="right",
