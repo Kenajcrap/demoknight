@@ -36,54 +36,16 @@ class Game(psutil.Popen):
     rudimentary way.
     """
 
-    required_launch_options = (
-        "+con_logfile",
-        "demoknight.log",
-        "-usercon",
-        "-condebug",
-        "-conclearlog",
-        # "+developer", "1", "+alias", "developer",
-        # "+contimes", "0", "+alias", "contimes",
-        "+ip",
-        "0.0.0.0",
-        "+alias",
-        "ip",
-        "+sv_rcon_whitelist_address",
-        "127.0.0.1",
-        # "+rcon_password", self._rand_pass(), "+alias", "rcon_password",
-        # "+hostport", self._free_port(), "+alias", "hostport",
-        # "+net_start",
-        # "+con_timestamp", "1", "+alias", "con_timestamp",
-        # "+net_showmsg", "svc_UserMessage",
-        # "+alias", "net_showmsg"
-    )
-
     def __init__(
         self, gameid=0, game_path=None, steam_path=None, l_opts=tuple(), **kwargs
     ):
-        self.password = self._rand_pass()
-        self.port = self._free_port()
+        self.password = l_opts[l_opts.index("+rcon_password") + 1]
+        self.port = int(l_opts[l_opts.index("+hostport") + 1])
         self.quitted = False
         self.last_position = 0
         self.state = mp.Value("i", GameState.DEFAULT.value)
         self.not_capturing = threading.Event()
         self.not_capturing.set()
-
-        all_launch_options = (
-            l_opts
-            + Game.required_launch_options
-            + (
-                "+rcon_password",
-                self.password,
-                "+alias",
-                "rcon_password",
-                "+hostport",
-                str(self.port),
-                "+alias",
-                "hostport",
-                "+net_start",
-            )
-        )
 
         if gameid:
             if system().startswith("Win"):
@@ -94,16 +56,16 @@ class Game(psutil.Popen):
             elif system().startswith("Linux"):
                 steam_bin = "steam"
 
-            args = (str(steam_bin), "-applaunch", str(gameid)) + all_launch_options
+            args = (str(steam_bin), "-applaunch", str(gameid)) + l_opts
 
         else:
-            args = (game_path,) + all_launch_options
+            args = ("mangohud", game_path) + l_opts
 
         # Check if steam is setup correctly, only start job if it is not running or
         # if it has the correct mangohud config already
         if gameid:
             logging.info("Checking if steam has the right enviroment variables set")
-            steam_state = self._steam_state(**kwargs)
+            steam_state = Game._steam_state(**kwargs)
             logging.debug(f"Steam State: {steam_state.value}")
 
             if steam_state in (SteamState.NOT_STARTED, SteamState.CONFIGURED):
@@ -132,7 +94,7 @@ class Game(psutil.Popen):
                 raise OSError("unknown steam_state")
 
         # TODO: Handle ProcessAlreadyRunning
-        if self._find_game_proc(game_path):
+        if Game._find_game_proc(game_path):
             raise Exception("Game is already running, close it and try again")
 
         gameinfo_path = tuple(game_path.parent.glob("./*/gameinfo.txt"))[0]
@@ -177,7 +139,7 @@ class Game(psutil.Popen):
         timeout = 0
         while timeout < 60:
             logging.debug("Waiting for game process to launch")
-            pid = self._find_game_proc(game_path)
+            pid = Game._find_game_proc(game_path)
             if pid is None:
                 sleep(1)
                 timeout += 1
@@ -354,23 +316,6 @@ class Game(psutil.Popen):
         self._wait_for_tick(tick)
         self.rcon("demo_debug 0; demo_timescale 1")
         return True
-
-    @staticmethod
-    def _rand_pass():
-        ch = string.ascii_letters + string.digits
-        password = "".join(SystemRandom().choice(ch) for _ in range(randint(6, 10)))
-        logging.debug(f"rcon password: {password}")
-        return password
-
-    @staticmethod
-    def _free_port():
-        for _ in range(10):
-            cur_port = randint(10240, 65534)
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                if s.connect_ex(("localhost", cur_port)):
-                    logging.debug(f"rcon port: {cur_port}")
-                    return cur_port
-            raise ValueError("Could not find empty port for rcon after 10 retries")
 
     def _wait_for_tick(self, tick):
         # print(steamdir)
