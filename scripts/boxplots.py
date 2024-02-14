@@ -72,12 +72,13 @@ def main(argv):
                     data,
                     autorange=True,
                     widths=0.4,
-                    labels=[res["name"] for res in summary],
+                    labels=[res["name"] + (f" ({len(res[k])} samples)" if all(len(d) for d in data) else "") for res in summary],
                     meanline=True,
                     showmeans=True,
                 )
                 # Add the mean values to the plot
-                for i, mean in enumerate(np.mean(data, axis=1)):
+                for i, d in enumerate(data):
+                    mean = np.mean(d)
                     ax.text(i + 1, mean, f"{mean:.2f}", ha="center", va="bottom")
 
                 # Calculate the positions of the mean lines of the boxes
@@ -117,7 +118,7 @@ def main(argv):
                         )
                     )
                 pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
-                pl.title(f"{k} ({len(data[0])} samples)")
+                pl.title(f"{k}" + (f"({len(data[0])} samples)" if not all(len(d) for d in data) else ""))
                 pl.xticks(rotation=10, ha="right")
                 ax.annotate(
                     f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n{file['comment']}, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",
