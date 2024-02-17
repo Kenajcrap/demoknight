@@ -40,7 +40,7 @@ def main(argv):
                     raise ValueError("Percentages must be positive integers")
                 entry[f"{n}% High of Frametime"] = []
             for i, res in enumerate(test["results"]):
-                if i == 0 and not file["keep_first_pass"]:
+                if (i % file["passes"]<=0) and not file["keep_first_pass"]:
                     continue
                 arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
                 # We actually start capturing 2 seconds before we need to, so get
@@ -72,7 +72,7 @@ def main(argv):
                     data,
                     autorange=True,
                     widths=0.4,
-                    labels=[res["name"] + (f" ({len(res[k])} samples)" if all(len(d) for d in data) else "") for res in summary],
+                    labels=[res["name"] + (f" ({len(res[k])} samples)" if not all(len(d) for d in data) else "") for res in summary],
                     meanline=True,
                     showmeans=True,
                 )
@@ -118,7 +118,7 @@ def main(argv):
                         )
                     )
                 pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
-                pl.title(f"{k}" + (f"({len(data[0])} samples)" if not all(len(d) for d in data) else ""))
+                pl.title(f"{k}" + (f"({len(data[0])} samples)" if all(len(d) for d in data) else ""))
                 pl.xticks(rotation=10, ha="right")
                 ax.annotate(
                     f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n{file['comment']}, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",

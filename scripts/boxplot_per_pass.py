@@ -73,7 +73,7 @@ def main(argv):
                         res["name"]
                         + (
                             f" ({len(res[k])} samples)"
-                            if all(len(d) for d in data)
+                            if not all(len(d) for d in data)
                             else ""
                         )
                         for res in summary
@@ -127,7 +127,7 @@ def main(argv):
                     f"{k}"
                     + (
                         f"({len(data[0])} samples)"
-                        if not all(len(d) for d in data)
+                        if all(len(d) for d in data)
                         else ""
                     )
                 )
