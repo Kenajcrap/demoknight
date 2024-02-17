@@ -9,24 +9,27 @@ from pathlib import Path
 
 
 def main(argv):
+    with open(Path(argv[0]).absolute(), encoding="utf-8") as outfile:
+        file = json.loads(outfile.read())
     if not argv:
         print("Averages")
-
+    
     if system().startswith("Win"):
         usecols = (9, 7)
         skiprows = 1
         one_second = 1
     elif system().startswith("Linux"):
-        usecols = (1, 11)
+        usecols = (1, 13)
         skiprows = 3
         one_second = 1000000000
     _, s = pl.subplots(figsize=(200, 10))
-    for p in list(Path(argv[0]).glob("./*")):
+    for p in file["tests"]:
         one_test = [[0, 0]]
-        for f in list(Path(p).glob("./*[0-9].csv")):
-            arr = np.loadtxt(f, delimiter=",", usecols=usecols, skiprows=skiprows)
+        for f in p["results"]:
+            arr = np.loadtxt(Path(f), delimiter=",", usecols=usecols, skiprows=skiprows)
             arr[:, 1] -= 2 * one_second
             arr = arr[arr[..., 1] >= 0]
+            arr[:, 1] = arr[:, 1] / one_second
             one_test = np.concatenate((one_test, arr))
         one_test[:, 1] = np.floor(one_test[:, 1] * 500) / 500
         unique_values = np.unique(one_test[:, 1])
@@ -37,7 +40,7 @@ def main(argv):
             ]
         )
         result = result[result[:, 1].argsort()]
-        s.plot(result[:, 1], result[:, 0], linewidth=0.3, label=p.name)
+        s.plot(result[:, 1], result[:, 0], linewidth=0.3, label=p["name"])
     # pl.legend([plt[0] for plt in s], [p.name for p in list(P
     # ath(argv[0]).glob("./*"))])
     pl.xlabel("Time (s)")
