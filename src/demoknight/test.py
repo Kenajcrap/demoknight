@@ -235,8 +235,14 @@ class Test:
             p = args.raw_path.absolute() / args.output_file / self.name
             logs = list(p.glob("./*[0-9].csv"))
             logs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-
-            self.results.append(logs[0])
+            if logs[0] not in self.results:
+                self.results.append(logs[0])
+                self.curr_pass += 1
+            else:
+                gm.quit()
+                raise FileNotFoundError(
+                    "Mangohud did not generate a new file after the pass was done. Closing the game and retrying the entire test."
+                )
             print(f"Finished pass {i}")
 
         gm.quit()

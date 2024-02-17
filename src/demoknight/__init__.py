@@ -502,6 +502,10 @@ def main():
                         "KeyboardInterrupt received. Some tests will probably end up with more passes than others."
                     )
                     exit(0)
+                except FileNotFoundError as e:
+                    logging.error(e)
+                    del test.results[-test.curr_pass :]
+                    continue
                 args.tests[test.index]["results"] = test.results
                 print(f"Finished test {test.name}")
                 success = True
