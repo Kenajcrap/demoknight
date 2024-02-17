@@ -30,7 +30,7 @@ class Test:
     Takes care of controlling the game and capture software, and applying changes
     """
 
-    required_mangohud_conf = ("no_display=0", "log_interval=0", "control=mangohud")
+    required_mangohud_conf = ("no_display=1", "log_interval=0", "control=mangohud")
 
     required_presentmon_conf = ("-terminate_after_timed", "-stop_existing_session")
 
@@ -57,6 +57,8 @@ class Test:
     )
 
     game_environ = environ.copy()
+
+    # game_environ.update({"MANGOHUD": "1"})
     game_environ.update({"GAME_DEBUGGER": "mangohud"})
 
     def __init__(self, args, index):
@@ -65,8 +67,10 @@ class Test:
         self.index = index
         self.temp_dir = Path(gettempdir()) / "demoknight"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self.curr_pass = 0
 
     def capture(self, args):
+        self.curr_pass = 0
         # create independent process just to make sure
         # https://stackoverflow.com/questions/13243807/popen-waiting-for-child-process-even-when-the-immediate-child-has-terminated/13256908#13256908
 
@@ -118,7 +122,7 @@ class Test:
 
             specific_environ = Test.game_environ.copy()
             # specific_environ.update({"MANGOHUD_CONFIG": mangohud_conf})
-            specific_environ.update({"MANGOHUD_CONFIGFILE": temp_conf_dir})
+            specific_environ.update({"MANGOHUD_CONFIGFILE": str(temp_conf_dir)})
             kwargs.update(env=specific_environ)
         else:
             raise NotImplementedError(

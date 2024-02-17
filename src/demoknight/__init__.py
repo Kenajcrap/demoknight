@@ -482,7 +482,7 @@ def main():
 
     args.system = {"CPU": get_cpu_name(), "GPU": get_gpu_name(), "OS": platform()}
     loops = 0
-    while loops + 1 != args.loops:
+    while args.loops == 0 or loops != args.loops:
         for test in tests:
             success = False
             while not success:
@@ -495,7 +495,7 @@ def main():
                     )
                     # TODO: If we later allow the tests to run continuously, we need to
                     # handle the clearing of results better
-                    test.results.clear()
+                    del test.results[-test.curr_pass :]
                     continue
                 except KeyboardInterrupt:
                     logging.warning(
@@ -513,6 +513,7 @@ def main():
                 ) as outfile:
                     json.dump(args.__dict__, outfile, default=str)
                 # test.watchdog.join()
+        loops += 1
 
     print("done")
 
