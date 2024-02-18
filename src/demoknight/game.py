@@ -41,7 +41,7 @@ class Game(psutil.Popen):
     ):
         self.password = l_opts[l_opts.index("+rcon_password") + 1]
         self.port = int(l_opts[l_opts.index("+hostport") + 1])
-        self.quitted = False
+        self.quitted = 0
         self.last_position = 0
         self.state = mp.Value("i", GameState.DEFAULT.value)
         self.not_capturing = threading.Event()
@@ -188,6 +188,14 @@ class Game(psutil.Popen):
                 last_not_running = 0
                 logging.debug(f"Process Status: {self.status()}")
 
+                # Zombie
+                if self.quitted:
+                    if time() - self.quitted > 10:
+                        logging.warning(
+                            "Game took too long to quit, killing process now."
+                        )
+                        self.kill()
+
                 # Loading
                 if self.status() in (psutil.STATUS_DISK_SLEEP, psutil.STATUS_SLEEPING):
                     last_disk_sleep = time()
@@ -277,7 +285,7 @@ class Game(psutil.Popen):
         if not self.watchdog_exceptions.empty():
             raise self.watchdog_exceptions.get()
         """'rcon quit', mark the instance as quitted, and remove the log file"""
-        self.quitted = True
+        self.quitted = time()
         self.rcon("quit")
         self.watchdog.join()
         os.remove(self.log_path)
