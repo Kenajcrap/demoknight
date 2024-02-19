@@ -290,7 +290,7 @@ def main():
     )
 
     parser.add_argument(
-        "-n",
+        "-p",
         "--passes",
         default=5,
         type=int,
@@ -310,16 +310,14 @@ def main():
     )
 
     parser.add_argument(
-        "-k",
-        "--keep-first-pass",
-        default=False,
-        action=StoreTrueFalseAction,
-        nargs="?",
-        const=True,
+        "-n",
+        "--discard-passes",
+        default=1,
+        type=int,
         help=(
-            "Keep first pass of each test. Discarting the first pass is needed if the"
-            " demo section used for benchmark is the very start, since performance"
-            " there is not representative. Default: %(default)s"
+            "Discard the first n passes of each test of each loop. Discarting the first passes is needed if the"
+            " demo section used for benchmark is the very start, since performance there is not representative."
+            " This option will not affect data capture, it'll be stored for other scripts. Default: %(default)s"
         ),
     )
 

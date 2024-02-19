@@ -13,7 +13,7 @@ def main(argv):
         file = json.loads(outfile.read())
     if not argv:
         print("Averages")
-    
+
     if system().startswith("Win"):
         usecols = (9, 7)
         skiprows = 1

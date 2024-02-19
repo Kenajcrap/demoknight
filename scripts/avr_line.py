@@ -40,7 +40,7 @@ def main(argv):
                     raise ValueError("Percentages must be positive integers")
                 entry[f"{n}% High of Frametime"] = []
             for i, res in enumerate(test["results"]):
-                if i == 0 and not file["keep_first_pass"]:
+                if i == 0 and not file["discard_passes"]:
                     continue
                 arr = np.loadtxt(res, delimiter=",", usecols=usecols, skiprows=skiprows)
                 # We actually start capturing 2 seconds before we need to, so get
