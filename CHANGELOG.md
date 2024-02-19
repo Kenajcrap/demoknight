@@ -1,3 +1,41 @@
+## 1.0.0 (2024-02-18)
+
+### BREAKING CHANGE
+
+- --format no longer exists
+- --percentiles has been removed
+
+### Feat
+
+- update to new output format
+- better legend and notes
+- Allow for more than one pass to be discarded
+- account for variable sample size in titles
+- graph per pass boxplot
+- handle unequal sample sizes
+- add missing comment field
+- include basic hardware and system information
+
+### Fix
+
+- display mangohud so that it captures properly
+- kill game process if it lingers in a zombie state
+- make sure the new mangohud file is actually new
+- fix loops and retry after game crash
+- update for new output format
+- update some scritps to use the new output format
+- shorten rcon password
+- Watch out for slow logs
+- account for client skipping ticks due to FPS
+
+### Refactor
+
+- clean up old scritps
+- update to new output file format
+- move launch option crafting from Game to Test
+- simplify output file, add loops
+- remove percentiles
+
 ## 0.1.0 (2023-03-26)
 
 ### Feat
