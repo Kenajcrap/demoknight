@@ -125,11 +125,7 @@ def main(argv):
                 pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
                 pl.title(
                     f"{k}"
-                    + (
-                        f"({len(data[0])} samples)"
-                        if all(len(d) for d in data)
-                        else ""
-                    )
+                    + (f"({len(data[0])} samples)" if all(len(d) for d in data) else "")
                 )
                 pl.xticks(rotation=10, ha="right")
                 ax.annotate(
