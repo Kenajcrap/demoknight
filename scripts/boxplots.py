@@ -91,7 +91,15 @@ def main(argv):
                 # Add the mean values to the plot
                 for i, d in enumerate(data):
                     mean = np.mean(d)
-                    ax.text(i + 1, mean, f"{mean:.2f}", ha="center", va="center")
+                    ax.annotate(
+                        f"{mean:.2f}",
+                        xy=(i + 1, mean),
+                        xytext=(-20, -30),
+                        textcoords="offset points",
+                        ha="center",
+                        va="bottom",
+                        arrowprops=dict(arrowstyle="-"),
+                    )
 
                 # Calculate the positions of the mean lines of the boxes
                 mean_lines = [
@@ -142,7 +150,7 @@ def main(argv):
                         textwrap.fill(
                             f"Methodology: Settings were set through UI whenever possible, the section of the demo file was played back at real-time speed, capturing frametime data with "
                             f"{('PresentMon' if 'Windows' in file['system']['OS'] else 'Mangohud')}. The process was repeated a total of "
-                            f"{len(file['tests'][-1]['results'])} for each test"
+                            f"{len(file['tests'][-1]['results'])} times for each test"
                             f"{(', quitting the game after every ' + str(file['passes']) + ' passes and going to the next one' if file['loops'] != 1 else '')}."
                             f"{(' Then, the first ' + str(file['discard_passes']) + ' passes after each game restart were discarted, since they were not representative of real performance' if file['discard_passes'] else '')}",
                             width=125,
@@ -172,10 +180,10 @@ def main(argv):
                     fontsize=6,
                     fontname="DejaVu Sans Mono",
                 )
-                pl.tight_layout()
-                pl.subplots_adjust(bottom=0.40)
                 pl.xlabel("Version")
                 pl.ylabel("Miliseconds")
+                pl.tight_layout()
+                pl.subplots_adjust(bottom=0.33)
                 pl.show()
 
 

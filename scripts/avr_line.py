@@ -71,6 +71,8 @@ def main(argv):
                     n = np.arange(len(item[key]))
                     plt.plot(n, item[key], label=item["name"])
                 plt.legend()
+        plt.xlabel("Pass")
+        plt.ylabel("Miliseconds")
         plt.show()
 
 
