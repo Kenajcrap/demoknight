@@ -30,7 +30,16 @@ class Test:
     Takes care of controlling the game and capture software, and applying changes
     """
 
-    required_mangohud_conf = ("no_display=1", "log_interval=0", "control=mangohud")
+    # TODO: File bugreport about mangohud failing to capture with no_display=1
+    required_mangohud_conf = (
+        "no_display=0",
+        "log_interval=0",
+        "control=mangohud",
+        "fps=0",
+        "frame_timing=0",
+        "cpu_stats=0",
+        "gpu_stats=0",
+    )
 
     required_presentmon_conf = ("-terminate_after_timed", "-stop_existing_session")
 
