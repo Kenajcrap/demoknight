@@ -65,22 +65,20 @@ def main(argv):
             summary.append(entry)
         for k, v in summary[0].items():
             if isinstance(v, list):
-                fig, ax = plt.subplots(tight_layout=True)
-                shape, location, scale = sp.stats.gamma.fit(v)
+                data = [res["Average Frametime"] for res in summary]
+                for i, d in enumerate(data):
+                    fig, ax = plt.subplots(tight_layout=True)
+                    shape, location, scale = sp.stats.gamma.fit(d)
 
-                ax.hist([res[k] for res in summary][0], density=True, bins="auto")
-                # Plot the PDF.
-                xmin, xmax = plt.xlim()
-                x = np.linspace(xmin, xmax, 100)
-                p = sp.stats.gamma.pdf(x, shape, location, scale)
-                plt.plot(x, p, "k", linewidth=2)
-                title = "Fit results: shape = %.2f,  location = %.2f, scale = %.2f" % (
-                    shape,
-                    location,
-                    scale,
-                )
-                plt.title(title)
-                plt.show()
+                    ax.hist(d, density=True, bins="auto")
+                    # Plot the PDF.
+                    xmin, xmax = plt.xlim()
+                    x = np.linspace(xmin, xmax, 100)
+                    p = sp.stats.gamma.pdf(x, shape, location, scale)
+                    plt.plot(x, p, "k", linewidth=2)
+                    title = f"{summary[i]['name']} {k} Histogam, Gamma fit\nFit results: shape = {round(shape, ndigits=2)},  location = {round(location, ndigits=2)}, scale = {round(scale, ndigits=2)}"
+                    plt.title(title)
+        plt.show()
 
 
 if __name__ == "__main__":
