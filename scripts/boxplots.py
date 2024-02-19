@@ -1,11 +1,13 @@
 from matplotlib import pyplot as pl
 from matplotlib import patches as mpatches
+from matplotlib.legend_handler import HandlerPatch
 import numpy as np
 import scipy
 import json
 import sys
 from platform import system
 from pathlib import Path
+import textwrap
 
 
 def main(argv):
@@ -74,14 +76,22 @@ def main(argv):
                     data,
                     autorange=True,
                     widths=0.4,
-                    labels=[res["name"] + (f" ({len(res[k])} samples)" if not all(len(d) for d in data) else "") for res in summary],
+                    labels=[
+                        res["name"]
+                        + (
+                            f" ({len(res[k])} samples)"
+                            if not all(len(d) for d in data)
+                            else ""
+                        )
+                        for res in summary
+                    ],
                     meanline=True,
                     showmeans=True,
                 )
                 # Add the mean values to the plot
                 for i, d in enumerate(data):
                     mean = np.mean(d)
-                    ax.text(i + 1, mean, f"{mean:.2f}", ha="center", va="bottom")
+                    ax.text(i + 1, mean, f"{mean:.2f}", ha="center", va="center")
 
                 # Calculate the positions of the mean lines of the boxes
                 mean_lines = [
@@ -110,31 +120,81 @@ def main(argv):
                         va="bottom",
                     )
 
-                    ax.add_patch(
-                        mpatches.FancyArrowPatch(
-                            (x_pos - 0.25, y_pos - (box2_mean - box1_mean) / 4),
-                            (x_pos + 0.25, y_pos + (box2_mean - box1_mean) / 4),
-                            mutation_scale=20,
-                            arrowstyle="->",
-                            color="green",
-                        )
+                    arrow_path = mpatches.FancyArrowPatch(
+                        (x_pos - 0.25, y_pos - (box2_mean - box1_mean) / 4),
+                        (x_pos + 0.25, y_pos + (box2_mean - box1_mean) / 4),
+                        mutation_scale=20,
+                        arrowstyle="->",
+                        color="green",
                     )
-                pl.legend([bp["means"][0], bp["medians"][0]], ["Mean", "Median"])
-                pl.title(f"{k}" + (f"({len(data[0])} samples)" if all(len(d) for d in data) else ""))
-                pl.xticks(rotation=10, ha="right")
-                ax.annotate(
-                    f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']},\n{file['comment']}, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration)",
-                    xy=(1, -0.3),
-                    xycoords="axes fraction",
-                    ha="right",
-                    va="bottom",
-                    fontsize=6,
+
+                    ax.add_patch(arrow_path)
+                annotation = "\n".join(
+                    (
+                        textwrap.fill(
+                            f"{file['system']['OS']}, {file['system']['CPU']}, {file['system']['GPU']}",
+                            width=125,
+                        ),
+                        textwrap.fill(
+                            f"{file['comment']}, {file['demo_path']} (start-tick {file['start_tick']}, {file['duration']} seconds duration), launch options: {' '.join(file['launch_options'])}",
+                            width=125,
+                        ),
+                        textwrap.fill(
+                            f"Methodology: Settings were set through UI whenever possible, the section of the demo file was played back at real-time speed, capturing frametime data with "
+                            f"{('PresentMon' if 'Windows' in file['system']['OS'] else 'Mangohud')}. The process was repeated a total of "
+                            f"{len(file['tests'][-1]['results'])} for each test"
+                            f"{(', quitting the game after every ' + str(file['passes']) + ' passes and going to the next one' if file['loops'] != 1 else '')}."
+                            f"{(' Then, the first ' + str(file['discard_passes']) + ' passes after each game restart were discarted, since they were not representative of real performance' if file['discard_passes'] else '')}",
+                            width=125,
+                        ),
+                    )
                 )
+                pl.legend(
+                    [bp["means"][0], bp["medians"][0], arrow_path],
+                    ["Mean", "Median", "Null Hypothesis"],
+                    handler_map={arrow_path: ArrowHandler()},
+                )
+                pl.title(
+                    f"{k}"
+                    + (f"({len(data[0])} samples)" if all(len(d) for d in data) else "")
+                )
+                pl.xticks(rotation=10, ha="right")
+                for label in pl.xticks()[1]:
+                    length = len(label.get_text())
+                    if length > 15:
+                        label.set_fontsize(8)
+                pl.figtext(
+                    0.99,
+                    0.05,
+                    annotation,
+                    horizontalalignment="right",
+                    verticalalignment="bottom",
+                    fontsize=6,
+                    fontname="DejaVu Sans Mono",
+                )
+                pl.tight_layout()
+                pl.subplots_adjust(bottom=0.40)
                 pl.xlabel("Version")
                 pl.ylabel("Miliseconds")
-                fig.set_size_inches(3.5 + (0.5 * len(data)), 4.8)
-                pl.tight_layout()
                 pl.show()
+
+
+class ArrowHandler(HandlerPatch):
+    def create_artists(
+        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    ):
+        # Create a new arrow patch with similar properties to the original
+        arrow_patch = mpatches.FancyArrowPatch(
+            (0, 2.5),  # Dummy coordinates, will be adjusted by the legend
+            (25, 2.5),  # Dummy coordinates, will be adjusted by the legend
+            mutation_scale=20,  # You can manually specify mutation_scale
+            arrowstyle="->",  # You can manually specify arrowstyle
+            color="green",  # You can manually specify color
+        )
+        # Adjust the arrow patch to fit correctly within the legend
+        arrow_patch.set_transform(trans)
+        arrow_patch.set_figure(legend.figure)
+        return [arrow_patch]
 
 
 if __name__ == "__main__":
