@@ -13,7 +13,6 @@ presentmon-path: presentmon
 passes: 5
 loops: 1
 discard-passes: 1
-keep-first-pass: True
 start-tick: 187
 start-buffer: 2
 duration: 20.0
@@ -29,3 +28,6 @@ tests:
         -
       launch-options:
         -
+      paths:           # from and to must either both be files or both be directories
+        - from:        # Path to file/directory to be copied
+          to:          # Path to file/directory to copy to
