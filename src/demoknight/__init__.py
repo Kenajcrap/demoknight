@@ -6,7 +6,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from platform import system, platform
+from platform import system, platform, processor
 from tempfile import gettempdir
 
 import numpy as np
