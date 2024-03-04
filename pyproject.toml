@@ -30,6 +30,12 @@ dependencies = [
     "pint"
 ]
 
+[project.optional-dependencies]
+scripts = [
+    "matplotlib",
+    "scipy"
+]
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 version = "1.0.0"
