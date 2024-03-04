@@ -447,6 +447,11 @@ def main():
             parents=True, exist_ok=True
         )
 
+    # Check if file paths for each test are valid
+    for test in args.tests:
+        for path in test.get("changes", {}).get("paths", {}):
+            path = Test._check_paths(path)
+
     # Main testing loop
 
     # Estimate how much time the job will take and warn the user if more than 1 hour
@@ -493,17 +498,37 @@ def main():
                     )
                     # TODO: If we later allow the tests to run continuously, we need to
                     # handle the clearing of results better
+                    for path in (
+                        args.tests[test.index].get("changes", {}).get("paths", [])
+                    ):
+                        path = Test._check_paths(path)
                     del test.results[-test.curr_pass :]
                     continue
                 except KeyboardInterrupt:
                     logging.warning(
                         "KeyboardInterrupt received. Some tests will probably end up with more passes than others."
                     )
+                    for path in (
+                        args.tests[test.index].get("changes", {}).get("paths", [])
+                    ):
+                        path = Test._check_paths(path)
                     exit(0)
                 except FileNotFoundError as e:
                     logging.error(e)
+                    for path in (
+                        args.tests[test.index].get("changes", {}).get("paths", [])
+                    ):
+                        path = Test._check_paths(path)
                     del test.results[-test.curr_pass :]
                     continue
+                except FileNotFoundError as e:
+                    logging.error(e)
+                    for path in (
+                        args.tests[test.index].get("changes", {}).get("paths", [])
+                    ):
+                        path = Test._check_paths(path)
+                    del test.results[-test.curr_pass :]
+                    exit(0)
                 args.tests[test.index]["results"] = test.results
                 print(f"Finished test {test.name}")
                 success = True

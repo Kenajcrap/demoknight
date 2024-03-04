@@ -2,11 +2,12 @@ import logging
 import string
 import socket
 import re
+import shutil
 
 from random import SystemRandom, randint
 from argparse import Namespace
 from datetime import datetime
-from os import environ
+from os import environ, rename, path
 from platform import system
 from time import perf_counter, sleep
 from tempfile import gettempdir
@@ -141,6 +142,49 @@ class Test:
         test_launch_options = args.tests[self.index]["changes"].get(
             "launch-options", ()
         )
+        # Move files for this test and back up if it already exists
+        for path in args.tests[self.index].get("changes", {}).get("paths", {}):
+            source_path = Path(path["from"])
+            destination_path = Path(path["to"])
+
+            if source_path.is_dir():
+                # Copy directory tree
+                if destination_path.exists():
+                    if not destination_path.is_dir():
+                        raise ValueError(
+                            "Paths in tests must contain either 2 directory paths, or 2 file paths, separated by space"
+                        )
+                    # If the destination directory already exists, create a backup by renaming it
+                    backup_destination = destination_path.with_name(
+                        destination_path.name + ".bak"
+                    )
+                    shutil.move(destination, backup_destination)
+                    logging.info(f"Copied existing directory to: {backup_destination}")
+
+                # Copy the source directory to the destination
+                shutil.copytree(source_path, destination_path)
+                logging.info(
+                    f"Moved folder/file from {source_path} to {destination_path}"
+                )
+            else:
+                # Copy file
+                if destination_path.exists():
+                    # If the destination file already exists, create a backup by renaming it
+                    backup_destination = destination_path.with_name(
+                        destination_path.name + ".bak"
+                    )
+                    destination_path.rename(backup_destination)
+                    logging.info(f"Copied existing file to: {backup_destination}")
+
+                # Copy the source file to the destination
+                shutil.copy(source_path, destination_path)
+                logging.info(
+                    f"Moved folder/file from {source_path} to {destination_path}"
+                )
+
+            with open(destination_path.parent / "demoknight.lock", "a") as lock_file:
+                lock_file.write(str(destination_path) + "\n")
+
         # Start game and wait for it to finish loading
         gm = Game(
             gameid=args.gameid,
@@ -255,7 +299,77 @@ class Test:
             print(f"Finished pass {i}")
 
         gm.quit()
+        for path in args.tests[self.index].get("changes", {}).get("paths", {}):
+            destination_path = Path(path["to"])
+
+            # Check if a backup exists
+            backup_destination = destination_path.with_name(
+                destination_path.name + ".bak"
+            )
+            if backup_destination.exists():
+                # Restore the backup
+                backup_destination.rename(destination_path)
+                logging.info(f"Reverted changes. Restored backup: {destination_path}")
+
+            else:
+                # Delete the newly copied file or directory
+                if destination_path.exists():
+                    if destination_path.is_dir():
+                        shutil.rmtree(path["to"])
+                        logging.info(
+                            f"Reverted changes. Deleted directory: {destination_path}"
+                        )
+                    else:
+                        destination_path.unlink()
+                        logging.info(
+                            f"Reverted changes. Deleted file: {destination_path}"
+                        )
+            lock_file = destination_path.parent / "demoknight.lock"
+            lock_file.unlink()
+
         sleep(10)
+
+    @staticmethod
+    def _check_paths(path):
+        path = {k: Path(p) for k, p in zip(("from", "to"), (path["from"], path["to"]))}
+        if not path["to"].parent.exists():
+            raise FileNotFoundError(f"Path {Path(paths['to']).parent} does not exist.")
+        if not path["from"].exists():
+            raise FileNotFoundError(f"Path {Path(path['from'])} does not exist.")
+        if not all(p.is_absolute() for _, p in path.items()):
+            raise ValueError(f"Paths in tests must be absolute")
+
+        lock_file = path["to"].parent / ("demoknight.lock")
+        if lock_file.exists():
+            logging.critical(f"{lock_file} found, restoring original paths")
+            with open(lock_file, "r") as file:
+                for line in file:
+                    line_path = Path(line)
+                    line_backup = line_path.with_name(line_path.name + ".bak")
+                    if line_backup.exists():
+                        logging.critical(
+                            f"{line_backup} found, restoring original file"
+                        )
+                        if line_backup.is_dir():
+                            shutil.move(line_backup, line_path)
+                        else:
+                            line_backup.rename(line_path)
+                        logging.info(f"Reverted changes. Restored backup: {line_path}")
+                    else:
+                        if line_path.is_dir():
+                            shutil.rmtree(line_path)
+                        else:
+                            line_path.unlink()
+            lock_file.unlink()
+
+        if path["to"].exists():
+            if not all((v.is_file()) for _, v in path.items()) or all(
+                (not v.is_file()) for _, v in path.items()
+            ):
+                raise ValueError(
+                    "Paths in tests must contain either 2 directory paths, or 2 file paths, separated by space"
+                )
+        return path
 
     @staticmethod
     def _rand_pass():
