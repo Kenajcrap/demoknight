@@ -147,15 +147,17 @@ There is also a [template](https://github.com/Kenajcrap/demoknight/blob/main/con
 In order of expedience
 
 - Integrate visualization options in the tool in a way that is easy for the user to expand on.
-- File manipulation as test option: Currently you can apply launch options and cvars, it would be nice to be able to switch files for testing mods.
 - Including metadata about the game being tested and the system in the summary output.
 
 ## Known Issues
 
 - If the game crashes to main menu instead of to the desktop (like when a demo file is corrupted or not fully compatible) the tool will silently capture invalid and continue
-- Currently the tool fails to proceed if the demo file specified is missing.
 - The tool does not parse `gameinfo.txt`, therefore, it cannot properly handle games that store the main executable or log files outside the main game folder.
 
 ## Data visualization
 
 Data visualization tools are currently not included in demoknight, however, some simple scripts can be found in `scripts` that take in the json output from demoknight or the folder containing the raw files. You will probably need to modify the scripts to use them properly.
+If you plan on using the scripts and want to make sure you will have the required libraries, use the `[scripts]` optional dependencies by doing:
+```zsh
+pip install '.[scripts]'
+```
