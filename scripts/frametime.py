@@ -14,11 +14,11 @@ def main(argv):
     if not argv:
         print("Averages")
 
-    if system().startswith("Win"):
+    if file["system"]["OS"].startswith("Win"):
         usecols = (9, 7)
         skiprows = 1
         one_second = 1
-    elif system().startswith("Linux"):
+    elif file["system"]["OS"].startswith("Linux"):
         usecols = (1, 13)
         skiprows = 3
         one_second = 1000000000

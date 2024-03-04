@@ -12,12 +12,12 @@ def main(argv):
         file = json.loads(outfile.read())
         summary = []
         # Import mangohud/presentmon data and set some constants
-        if system().startswith("Win"):
+        if file["system"]["OS"].startswith("Win"):
             usecols = (9, 7)
             skiprows = 1
             elapsed_second = 1
             frametime_ms = 1
-        elif system().startswith("Linux"):
+        elif file["system"]["OS"].startswith("Linux"):
             usecols = (1, 13)
             skiprows = 3
             elapsed_second = 1000000

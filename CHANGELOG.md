@@ -1,3 +1,14 @@
+## 1.1.0 (2024-02-19)
+
+### Feat
+
+- support more than one test
+- update keep-first-pass to discard_passes
+
+### Fix
+
+- format better the graphs, fix typos
+
 ## 1.0.0 (2024-02-18)
 
 ### BREAKING CHANGE
