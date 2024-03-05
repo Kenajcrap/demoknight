@@ -22,9 +22,9 @@ The automation also allows the user to leverage simple statistical analysis to i
 
 ## Installation
 
-For Linux users [Mangohud](https://github.com/flightlessmango/MangoHud) needs to be installed and be accessible through `mangohud`.
+For Linux users [Mangohud](https://github.com/flightlessmango/MangoHud/releases) needs to be installed and be accessible through `mangohud`.
 
-For Windows users, [PresentMon](https://github.com/GameTechDev/PresentMon) needs to be downloaded and either be accessible through `presentmon` (by adding it to PATH) or pointed to with `--presentmon-path` launch option.
+For Windows users, [PresentMon](https://github.com/GameTechDev/PresentMon/releases) needs to be downloaded and either be accessible through `presentmon` (by adding it to PATH) or pointed to with `--presentmon-path` launch option.
 
 The user running the script needs to be part of the [Performance Log Users](https://github.com/GameTechDev/PresentMon#user-access-denied) user group
 
