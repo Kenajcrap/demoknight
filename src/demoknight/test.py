@@ -344,7 +344,7 @@ class Test:
             logging.critical(f"{lock_file} found, restoring original paths")
             with open(lock_file, "r") as file:
                 for line in file:
-                    line_path = Path(line)
+                    line_path = Path(line.strip())
                     line_backup = line_path.with_name(line_path.name + ".bak")
                     if line_backup.exists():
                         logging.critical(
